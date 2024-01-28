@@ -1,0 +1,19 @@
+eureka:
+  instance:
+    hostname: "host.docker.internal"
+  client:
+    enabled: true
+spring:
+  datasource:
+    url: "jdbc:mysql://host.docker.internal:8306/${spring.application.name}"
+playqd:
+  sources:
+    - name: "All Music"
+      path: "/media/music"
+      watchable: false
+      scanOnStart: true
+  workingDir: "/.playqd"
+
+logging:
+  level:
+    io.playqd: DEBUG

@@ -1,0 +1,53 @@
+rootProject.name = 'playqd-media-library'
+
+dependencyResolutionManagement {
+    versionCatalogs {
+        libs {
+            version('jibPlugin', '3.4.0')
+            version('springDependencyPlugin', '1.1.0')
+            version('lombok', '1.18.30')
+            version('ehcache', '3.10.8')
+            version('mysqlConnector', '8.0.33')
+            version('flywaydb', '10.4.1')
+            version('springBoot', '3.2.0')
+            version('springDocOpenApi', '2.3.0')
+            version('junitJupiter', '5.10.1')
+            version('junitPlatform', '1.10.1')
+
+            version('playqd-commons', '0.0.2')
+
+            library('ehcache', 'org.ehcache', 'ehcache').versionRef('ehcache')
+            library('lombok', 'org.projectlombok', 'lombok').versionRef('lombok')
+            library('flyway-db', 'org.flywaydb', 'flyway-core').versionRef('flywaydb')
+            library('flyway-mysql', 'org.flywaydb', 'flyway-mysql').versionRef('flywaydb')
+            library('h2', 'com.h2database', 'h2').version('2.2.222')
+            library('mysql', 'mysql', 'mysql-connector-java').versionRef('mysqlConnector')
+            library('jaudiotagger', 'net.jthink', 'jaudiotagger').version('3.0.1')
+            library('apache-tika', 'org.apache.tika', 'tika-core').version('2.8.0')
+            library('micrometer-prometheus', 'io.micrometer', 'micrometer-registry-prometheus').version('1.11.3')
+
+            library('spring-boot-actuator', 'org.springframework.boot', 'spring-boot-starter-actuator').versionRef('springBoot')
+            library('spring-boot-cache', 'org.springframework.boot', 'spring-boot-starter-cache').versionRef('springBoot')
+            library('spring-boot-data-jdbc', 'org.springframework.boot', 'spring-boot-starter-data-jdbc').versionRef('springBoot')
+            library('spring-boot-data-jpa', 'org.springframework.boot', 'spring-boot-starter-data-jpa').versionRef('springBoot')
+            library('spring-boot-logging', 'org.springframework.boot', 'spring-boot-starter-logging').versionRef('springBoot')
+            library('spring-boot-validation', 'org.springframework.boot', 'spring-boot-starter-validation').versionRef('springBoot')
+            library('spring-boot-web', 'org.springframework.boot', 'spring-boot-starter-web').versionRef('springBoot')
+            library('spring-boot-test', 'org.springframework.boot', 'spring-boot-starter-test').versionRef('springBoot')
+
+            library('spring-cloud-eureka-client', 'org.springframework.cloud', 'spring-cloud-starter-netflix-eureka-client').withoutVersion()
+
+            library('spring-doc-openapi', 'org.springdoc', 'springdoc-openapi-starter-webmvc-ui').versionRef('springDocOpenApi')
+
+            library('playqd-utils', 'io.playqd.commons', 'playqd-utils').versionRef('playqd-commons')
+            library('playqd-data', 'io.playqd.commons', 'playqd-data').versionRef('playqd-commons')
+
+            library('junit-platform-commons', 'org.junit.platform', 'junit-platform-commons').versionRef('junitPlatform')
+            library('junit-platform-engine', 'org.junit.platform', 'junit-platform-engine').versionRef('junitPlatform')
+            library('junit-platform-launcher', 'org.junit.platform', 'junit-platform-launcher').versionRef('junitPlatform')
+            library('junit-jupiter-engine', 'org.junit.jupiter', 'junit-jupiter-engine').versionRef('junitJupiter')
+            library('junit-jupiter-api', 'org.junit.jupiter', 'junit-jupiter-api').versionRef('junitJupiter')
+            library('mockito-core', 'org.mockito','mockito-core').version('5.5.0')
+        }
+    }
+}
