@@ -2,14 +2,10 @@ package io.playqd.persistence.jpa.dao;
 
 import io.playqd.commons.data.Album;
 import io.playqd.commons.data.Artist;
-import io.playqd.commons.data.Genre;
 import io.playqd.model.AudioFile;
 import io.playqd.persistence.AudioFileDao;
-import io.playqd.persistence.Filter;
 import io.playqd.persistence.jpa.entity.AudioFileJpaEntity;
-import io.playqd.persistence.jpa.entity.AudioFileSourceAuditLogJpaEntity;
 import io.playqd.persistence.jpa.entity.PersistableAuditableEntity;
-import io.playqd.persistence.jpa.repository.AudioFileAuditLogRepository;
 import io.playqd.persistence.jpa.repository.AudioFileRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -22,18 +18,14 @@ import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.stream.Stream;
 
@@ -42,38 +34,15 @@ public class JpaAudioFileDao implements AudioFileDao {
 
   private final JdbcTemplate jdbcTemplate;
   private final AudioFileRepository audioFileRepository;
-  private final AudioFileAuditLogRepository audioFileAuditLogRepository;
 
-  public JpaAudioFileDao(JdbcTemplate jdbcTemplate,
-                         AudioFileRepository audioFileRepository,
-                         AudioFileAuditLogRepository audioFileAuditLogRepository) {
+  public JpaAudioFileDao(JdbcTemplate jdbcTemplate, AudioFileRepository audioFileRepository) {
     this.jdbcTemplate = jdbcTemplate;
     this.audioFileRepository = audioFileRepository;
-    this.audioFileAuditLogRepository = audioFileAuditLogRepository;
-  }
-
-  private static Album fromProjection(AlbumsProjection projection) {
-    return new Album(
-        projection.getId(),
-        projection.getName(),
-        projection.getReleaseDate(),
-        projection.getGenreId(),
-        projection.getGenre(),
-        projection.getArtistId(),
-        projection.getArtistName(),
-        projection.getArtworkEmbedded(),
-        projection.getAddedToWatchFolderDate(),
-        projection.getTracks());
   }
 
   @Override
-  public long countGenres() {
-    return audioFileRepository.countDistinctGenres();
-  }
-
-  @Override
-  public long countArtists() {
-    return audioFileRepository.countDistinctArtists();
+  public boolean isEmpty() {
+    return audioFileRepository.count() == 0;
   }
 
   @Override
@@ -82,18 +51,18 @@ public class JpaAudioFileDao implements AudioFileDao {
   }
 
   @Override
-  public long countRecentlyAdded() {
-    return resolveDateAfter().map(audioFileRepository::countByCreatedDateAfter).orElse(0L);
+  public long countNotPlayed() {
+    return audioFileRepository.countByFileLastPlaybackDateIsNull();
   }
 
   @Override
-  public long countAlbumAudioFiles(String albumId) {
-    return audioFileRepository.countByAlbumId(albumId);
+  public long countByAddedToWatchFolderSinceDate(LocalDate sinceDate) {
+    return audioFileRepository.countByFileAddedToWatchFolderDateAfter(sinceDate);
   }
 
   @Override
-  public long countArtistAudioFiles(String artistId) {
-    return audioFileRepository.countByArtistId(artistId);
+  public LocalDate findLatestAddedToWatchFolderDate() {
+    return audioFileRepository.findMaxAddedToWatchFolderDate();
   }
 
   @Override
@@ -103,39 +72,9 @@ public class JpaAudioFileDao implements AudioFileDao {
 
   @Override
   @Transactional(readOnly = true)
-  public List<Genre> getAllGenres() {
-    return audioFileRepository.streamDistinctGenres()
-        .map(prj -> new Genre(prj.getId(), prj.getName(), prj.getArtists(), prj.getAlbums(), prj.getTracks()))
-        .sorted()
-        .toList();
-  }
-
-  @Override
-  @Transactional(readOnly = true)
-  public Page<Artist> getArtists(Pageable pageable) {
-    return audioFileRepository.findArtists(pageable)
+  public Page<Artist> getGenreArtists(String genreId, Pageable pageable) {
+    return audioFileRepository.findArtistsByGenreId(genreId, pageable)
         .map(prj -> new Artist(prj.getId(), prj.getName(), prj.getAlbums(), prj.getTracks()));
-  }
-
-  @Override
-  @Transactional(readOnly = true)
-  public List<Artist> getGenreArtists(String genreId) {
-    return audioFileRepository.streamArtistsByGenreId(genreId)
-        .map(prj -> new Artist(prj.getId(), prj.getName(), prj.getAlbums(), prj.getTracks()))
-        .sorted()
-        .toList();
-  }
-
-  @Override
-  @Transactional(readOnly = true)
-  public List<Album> getGenreAlbums(String genreId) {
-    return audioFileRepository.streamAlbumsByGenreId(genreId).map(JpaAudioFileDao::fromProjection).toList();
-  }
-
-  @Override
-  @Transactional(readOnly = true)
-  public List<Album> getAlbumsByArtistId(String artistId) {
-    return audioFileRepository.streamAlbumsByArtistId(artistId).map(JpaAudioFileDao::fromProjection).toList();
   }
 
   @Override
@@ -153,48 +92,53 @@ public class JpaAudioFileDao implements AudioFileDao {
   }
 
   @Override
-  public Page<AudioFile> getAudioFiles(Filter filter, Pageable pageable) {
-    if (StringUtils.hasText(filter.value())) {
-      return audioFileRepository.findByTrackTitleOrFileNameContainingIgnoreCase(filter.value(), pageable)
-          .map(entity -> entity);
-    }
+  public Page<AudioFile> getAudioFiles(Pageable pageable) {
     return audioFileRepository.findAll(pageable).map(entity -> entity);
   }
 
   @Override
-  public Page<AudioFile> getAudioFilesByLocationIn(Collection<String> locations) {
-    return audioFileRepository.findAllByLocationIn(locations, Pageable.unpaged()).map(entity -> entity);
+  public Page<AudioFile> getAudioFilesByLocationIn(Collection<String> locations, Pageable pageable) {
+    return audioFileRepository.findAllByLocationIn(locations, pageable).map(entity -> entity);
   }
 
   @Override
-  public List<AudioFile> getAudioFilesByArtistId(String artistId) {
-    return Collections.unmodifiableList(audioFileRepository.findAllByArtistId(artistId));
+  public Page<AudioFile> getAudioFilesByArtistId(String artistId, Pageable pageable) {
+    return audioFileRepository.findAllByArtistId(artistId, pageable).map(entity -> entity);
   }
 
   @Override
-  public List<AudioFile> getAudioFilesByAlbumId(String albumId) {
-    return Collections.unmodifiableList(audioFileRepository.findAllByAlbumId(albumId));
+  public Page<AudioFile> getAudioFilesByAlbumId(String albumId, Pageable pageable) {
+    return audioFileRepository.findAllByAlbumId(albumId, pageable).map(entity -> entity);
   }
 
   @Override
-  public Page<AudioFile> getAudioFilesAddedAfterDate(LocalDate dateAfter, Pageable pageable) {
-    return audioFileRepository.findByFileAddedToWatchFolderDateAfter(dateAfter, pageable).map(entity -> entity);
+  public Page<AudioFile> getAudioFilesByGenreId(String genreId, Pageable pageable) {
+    return audioFileRepository.findAllByGenreId(genreId, pageable).map(entity -> entity);
   }
 
   @Override
-  public Page<AudioFile> getRecentlyAdded(LocalDate dateAfter, Pageable pageable) {
-    return audioFileRepository.findByFileAddedToWatchFolderDateAfter(dateAfter, pageable).map(entity -> entity);
+  public Page<AudioFile> getAudioFilesByTitle(String title, Pageable page) {
+    return audioFileRepository.findByTrackTitleOrFileNameContainingIgnoreCase(title, page).map(entity -> entity);
   }
 
   @Override
-  public Page<AudioFile> getPlayed(Pageable pageable) {
-    var queryPageable = pageable;
-    var sort = pageable.getSort();
-    if (pageable.getSort().isUnsorted()) {
-      sort = Sort.by(AudioFileJpaEntity.FLD_FILE_LAST_PLAYBACK_DATE).descending();
-      queryPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+  public Page<AudioFile> getAudioFilesByPlayed(boolean played, Pageable pageable) {
+    if (played) {
+      var queryPageable = pageable;
+      var sort = pageable.getSort();
+      if (pageable.getSort().isUnsorted()) {
+        sort = Sort.by(AudioFileJpaEntity.FLD_FILE_LAST_PLAYBACK_DATE).descending();
+        queryPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+      }
+      return audioFileRepository.findByFileLastPlaybackDateIsNotNull(queryPageable).map(entity -> entity);
+    } else {
+      return audioFileRepository.findByFileLastPlaybackDateIsNull(pageable).map(entity -> entity);
     }
-    return audioFileRepository.findByFileLastPlaybackDateIsNotNull(queryPageable).map(entity -> entity);
+  }
+
+  @Override
+  public Page<AudioFile> getAudioFilesAddedToWatchFolderAfterDate(LocalDate afterDate, Pageable pageable) {
+    return audioFileRepository.findByFileAddedToWatchFolderDateAfter(afterDate, pageable).map(entity -> entity);
   }
 
   @Override
@@ -214,14 +158,6 @@ public class JpaAudioFileDao implements AudioFileDao {
         .usingGeneratedKeyColumns(PersistableAuditableEntity.COL_PK_ID);
 
     return jdbcInsert.executeBatch(sqlParameterSources).length;
-  }
-
-  @Override
-  @Transactional
-  public void setNewLastRecentlyAddedDate(LocalDateTime lastRecentlyAddedDateTime) {
-    var entity = audioFileAuditLogRepository.getOne().orElseGet(AudioFileSourceAuditLogJpaEntity::new);
-    entity.setLastAddedDate(lastRecentlyAddedDateTime);
-    audioFileAuditLogRepository.save(entity);
   }
 
   @Override
@@ -281,7 +217,17 @@ public class JpaAudioFileDao implements AudioFileDao {
     return audioFileRepository.deleteByLocationIsStartingWith(path.toString());
   }
 
-  private Optional<LocalDateTime> resolveDateAfter() {
-    return audioFileAuditLogRepository.getOne().map(entity -> entity.getLastAddedDate().minusHours(1));
+  private static Album fromProjection(AlbumsProjection projection) {
+    return new Album(
+        projection.getId(),
+        projection.getName(),
+        projection.getReleaseDate(),
+        projection.getGenreId(),
+        projection.getGenre(),
+        projection.getArtistId(),
+        projection.getArtistName(),
+        projection.getArtworkEmbedded(),
+        projection.getAddedToWatchFolderDate(),
+        projection.getTracks());
   }
 }

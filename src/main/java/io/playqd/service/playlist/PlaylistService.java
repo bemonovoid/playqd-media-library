@@ -1,10 +1,10 @@
 package io.playqd.service.playlist;
 
 import io.playqd.model.AudioFile;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface PlaylistService {
 
-  List<AudioFile> getPlaylistAudioFiles(String playlistId);
+  Page<AudioFile> getPlaylistAudioFiles(String playlistId, Pageable pageable);
 }

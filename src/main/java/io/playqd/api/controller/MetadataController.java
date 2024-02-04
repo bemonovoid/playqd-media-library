@@ -1,40 +1,30 @@
 package io.playqd.api.controller;
 
 import io.playqd.api.controller.response.AddedMetadataResponse;
-import io.playqd.api.controller.response.MediaItemsCount;
 import io.playqd.commons.data.Album;
+import io.playqd.commons.data.AlbumQueryParams;
 import io.playqd.commons.data.Artist;
+import io.playqd.commons.data.ArtistQueryParams;
 import io.playqd.commons.data.Genre;
 import io.playqd.commons.data.Track;
 import io.playqd.model.AudioFile;
-import io.playqd.model.MediaItemFilter;
-import io.playqd.model.MediaItemType;
 import io.playqd.persistence.AudioFileDao;
-import io.playqd.persistence.Filter;
 import io.playqd.persistence.MetadataReaderDao;
-import io.playqd.persistence.jpa.entity.view.ArtistViewEntity;
+import io.playqd.persistence.WatchFolderFileEventLogDao;
 import io.playqd.service.metadata.AlbumArtworkService;
 import io.playqd.service.metadata.ImageSizeRequestParam;
-import io.playqd.service.metadata.MediaMetadataService;
-import io.playqd.service.metadata.MetadataContentInfo;
+import io.playqd.service.playlist.PlaylistService;
 import io.playqd.util.FileUtils;
 import io.playqd.util.TimeUtils;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.http.HttpStatus;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Duration;
@@ -50,50 +40,49 @@ import java.util.stream.Collectors;
 class MetadataController {
 
   private final AudioFileDao audioFileDao;
+  private final PlaylistService playlistService;
   private final AlbumArtworkService artworkService;
   private final MetadataReaderDao metadataReaderDao;
-  private final MediaMetadataService mediaMetadataService;
+  private final WatchFolderFileEventLogDao watchFolderFileEventLogDao;
 
   MetadataController(AudioFileDao audioFileDao,
+                     PlaylistService playlistService,
                      AlbumArtworkService artworkService,
                      MetadataReaderDao metadataReaderDao,
-                     MediaMetadataService mediaMetadataService) {
+                     WatchFolderFileEventLogDao watchFolderFileEventLogDao) {
     this.audioFileDao = audioFileDao;
+    this.playlistService = playlistService;
     this.artworkService = artworkService;
     this.metadataReaderDao = metadataReaderDao;
-    this.mediaMetadataService = mediaMetadataService;
+    this.watchFolderFileEventLogDao = watchFolderFileEventLogDao;
   }
 
-  @GetMapping("/sources/{sourceId}/info")
-  MetadataContentInfo info(@PathVariable long sourceId) {
-    return mediaMetadataService.getInfo(sourceId);
-  }
-
-  @DeleteMapping("/sources/{sourceId}")
-  @ResponseStatus(HttpStatus.NO_CONTENT)
-  String clear(@PathVariable long sourceId) {
-    return String.format("Successfully removed %s metadata items from store.", mediaMetadataService.clear(sourceId));
-  }
+//  @GetMapping("/sources/{sourceId}/info")
+//  MetadataContentInfo info(@PathVariable long sourceId) {
+//    return mediaMetadataService.getInfo(sourceId);
+//  }
+//
+//  @DeleteMapping("/sources/{sourceId}")
+//  @ResponseStatus(HttpStatus.NO_CONTENT)
+//  String clear(@PathVariable long sourceId) {
+//    return String.format("Successfully removed %s metadata items from store.", mediaMetadataService.clear(sourceId));
+//  }
 
   @GetMapping("/artists")
-  Page<Artist> artists(@PageableDefault(size = 100, sort = "name") Pageable page) {
+  Page<Artist> artists(@PageableDefault(size = 100, sort = "name") Pageable page, ArtistQueryParams params) {
+    if (StringUtils.hasLength(params.genreId())) {
+      return audioFileDao.getGenreArtists(params.genreId(), page);
+    }
     return metadataReaderDao.getArtists(page);
   }
 
-  @GetMapping("/counts/{mediaItemType}")
-  MediaItemsCount artistsCount(@PathVariable MediaItemType mediaItemType,
-                              @RequestParam(name = "filter", required = false) MediaItemFilter filter) {
-    return new MediaItemsCount(metadataReaderDao.count(mediaItemType, filter));
-  }
-
   @GetMapping("/albums")
-  Page<Album> albums(@PageableDefault(size = 100, sort = "name") Pageable page,
-                         @RequestParam(name = "artistId", required = false, defaultValue = "") String artistId,
-                         @RequestParam(name = "genreId", required = false, defaultValue = "") String genreId) {
-    if (!artistId.isEmpty()) {
-      return metadataReaderDao.getAlbumsByArtistId(artistId, page);
-    } else if (!genreId.isEmpty()) {
-      return metadataReaderDao.getAlbumsByGenreId(genreId, page);
+  Page<Album> albums(@PageableDefault(size = 100, sort = "name") Pageable page, AlbumQueryParams params) {
+    if (StringUtils.hasLength(params.artistId())) {
+      return metadataReaderDao.getAlbumsByArtistId(params.artistId(), page);
+    }
+    if (StringUtils.hasLength(params.genreId())) {
+      return metadataReaderDao.getAlbumsByGenreId(params.genreId(), page);
     }
     return metadataReaderDao.getAlbums(page);
   }
@@ -105,25 +94,64 @@ class MetadataController {
 
   @GetMapping("/tracks")
   Page<Track> tracks(@PageableDefault(size = 100, sort = "name") Pageable page,
-                        @RequestParam(name = "filter", required = false, defaultValue = "") String filter,
-                        @RequestParam(name = "artistId", required = false, defaultValue = "") String artistId,
-                        @RequestParam(name = "albumId", required = false, defaultValue = "") String albumId,
-                        @RequestParam(name = "locations", required = false) Set<String> locations) {
+                     @RequestParam(name = "artistId", required = false) String artistId,
+                     @RequestParam(name = "albumId", required = false) String albumId,
+                     @RequestParam(name = "genreId", required = false) String genreId,
+                     @RequestParam(name = "playlistId", required = false) String playlistId,
+                     @RequestParam(name = "title", required = false) String title,
+                     @RequestParam(name = "played", required = false) Boolean played,
+                     @RequestParam(name = "lastRecentlyAdded", required = false) boolean lastRecentlyAdded,
+                     @RequestParam(name = "recentlyAddedSinceDuration", required = false) String recentlyAddedSinceDuration,
+                     @RequestParam(name = "locations", required = false) Set<String> locations) {
     if (StringUtils.hasLength(artistId)) {
-      return new PageImpl<>(audioFileDao.getAudioFilesByArtistId(artistId)).map(this::mapToTrack);
-    } else if (StringUtils.hasLength(albumId)) {
-      return new PageImpl<>(audioFileDao.getAudioFilesByAlbumId(albumId)).map(this::mapToTrack);
-    } else if (!CollectionUtils.isEmpty(locations)) {
-      return audioFileDao.getAudioFilesByLocationIn(locations).map(this::mapToTrack);
+      return audioFileDao.getAudioFilesByArtistId(artistId, page).map(this::mapToTrack);
     }
-    return audioFileDao.getAudioFiles(new Filter(filter), page).map(this::mapToTrack);
+
+    if (StringUtils.hasLength(albumId)) {
+      return audioFileDao.getAudioFilesByAlbumId(albumId, page).map(this::mapToTrack);
+    }
+
+    if (StringUtils.hasLength(genreId)) {
+      return audioFileDao.getAudioFilesByGenreId(genreId, page).map(this::mapToTrack);
+    }
+
+    if (StringUtils.hasLength(playlistId)) {
+      return playlistService.getPlaylistAudioFiles(playlistId, page).map(this::mapToTrack);
+    }
+
+    if (StringUtils.hasText(title)) {
+      return audioFileDao.getAudioFilesByTitle(title, page).map(this::mapToTrack);
+    }
+
+    if (played != null) {
+      return audioFileDao.getAudioFilesByPlayed(played, page).map(this::mapToTrack);
+    }
+
+    if (!CollectionUtils.isEmpty(locations)) {
+      return audioFileDao.getAudioFilesByLocationIn(locations, page).map(this::mapToTrack);
+    }
+
+    if (lastRecentlyAdded) {
+      if (watchFolderFileEventLogDao.hasEvents()) {
+        var dateAfter = watchFolderFileEventLogDao.getLastAddedDate().minusDays(1);
+        return audioFileDao.getAudioFilesAddedToWatchFolderAfterDate(dateAfter, page).map(this::mapToTrack);
+      }
+      return Page.empty();
+    }
+
+    if (StringUtils.hasText(recentlyAddedSinceDuration)) {
+      var duration = Duration.parse(recentlyAddedSinceDuration);
+      var dateAfter = LocalDate.now().minusDays(duration.toDays());
+      return audioFileDao.getAudioFilesAddedToWatchFolderAfterDate(dateAfter, page).map(this::mapToTrack);
+    }
+
+    return audioFileDao.getAudioFiles(page).map(this::mapToTrack);
   }
 
-  @GetMapping("/recentlyAdded")
-  AddedMetadataResponse recentlyAdded(@RequestParam(required = false, name = "lastNumberOfMonths", defaultValue = "3")
-                                      @Min(1) @Max(12)
-                                      int lastNumberOfMonths) {
-    var dateAfter = LocalDate.now().minusMonths(lastNumberOfMonths).minusDays(1);
+  @GetMapping("/tracks/added")
+  AddedMetadataResponse recentlyAdded(@RequestParam(required = false, name = "durationFromNow", defaultValue = "PT3M")
+                                      Duration durationFromNow) {
+    var dateAfter = LocalDate.now().minusDays(durationFromNow.toDays() + 1);
 
     var albumsAddedAfter = audioFileDao.getAlbumsAddedAfterDate(dateAfter);
 
@@ -171,9 +199,7 @@ class MetadataController {
         audioFile.preciseTrackLength(),
         TimeUtils.durationToTimeFormat(Duration.ofSeconds(audioFile.trackLength())));
 
-    var playback = new Track.Playback(
-        audioFile.playbackCount(),
-        audioFile.fileLastPlaybackDate() == null ? null : LocalDateTime.ofInstant(audioFile.fileLastPlaybackDate(), ZoneId.systemDefault()));
+    var playback = new Track.Playback(audioFile.playbackCount(), toTrackLastPlayedDate(audioFile));
 
     var audioFormat = new Track.AudioFormat(
         audioFile.mimeType(),
@@ -201,6 +227,13 @@ class MetadataController {
         audioFormat,
         fileAttributes,
         additionalInfo);
+  }
+
+  private static LocalDateTime toTrackLastPlayedDate(AudioFile audioFile) {
+    if (audioFile.fileLastPlaybackDate() == null) {
+      return null;
+    }
+    return LocalDateTime.ofInstant(audioFile.fileLastPlaybackDate(), ZoneId.systemDefault());
   }
 
 }

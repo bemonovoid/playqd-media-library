@@ -85,7 +85,6 @@ class AudioFileMediaMetadataServiceImpl implements MediaMetadataService {
         .parallel()
         .filter(AudioFileAttributes::wasModified)
         .toList();
-    ;
 
     if (modifiedFiles.isEmpty()) {
       return metadataTotalCount == musicDirectoryContentInfo.totalCount()

@@ -2,14 +2,12 @@ package io.playqd.persistence;
 
 import io.playqd.commons.data.Album;
 import io.playqd.commons.data.Artist;
-import io.playqd.commons.data.Genre;
 import io.playqd.model.AudioFile;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.nio.file.Path;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -17,61 +15,47 @@ import java.util.stream.Stream;
 
 public interface AudioFileDao {
 
-  Page<Artist> getArtists(Pageable pageable);
-
-  Page<AudioFile> getAudioFiles(Filter filter, Pageable pageable);
-
-  long countGenres();
-
-  long countArtists();
+  boolean isEmpty();
 
   long countPlayed();
 
-  long countRecentlyAdded();
+  long countNotPlayed();
 
-  long countAlbumAudioFiles(String albumId);
+  long countByAddedToWatchFolderSinceDate(LocalDate sinceDate);
 
-  long countArtistAudioFiles(String artistId);
+  LocalDate findLatestAddedToWatchFolderDate();
 
   AudioFile getAudioFile(long id);
 
   AudioFile getFirstAudioFileByAlbumId(String albumId);
 
-  List<Genre> getAllGenres();
+  Page<AudioFile> getAudioFiles(Pageable pageable);
 
-  default Page<AudioFile> getRecentlyAdded(Pageable pageable) {
-    return getRecentlyAdded(LocalDate.now().minusMonths(3).minusDays(1), pageable);
-  }
+  Page<AudioFile> getAudioFilesByArtistId(String artistId, Pageable pageable);
 
-  Page<AudioFile> getRecentlyAdded(LocalDate dateAfter, Pageable pageable);
+  Page<AudioFile> getAudioFilesByAlbumId(String albumId, Pageable pageable);
 
-  Page<AudioFile> getPlayed(Pageable pageable);
+  Page<AudioFile> getAudioFilesByGenreId(String genreId, Pageable pageable);
 
-  List<Artist> getGenreArtists(String genreId);
+  Page<AudioFile> getAudioFilesByTitle(String title, Pageable page);
 
-  List<Album> getGenreAlbums(String genreId);
+  Page<AudioFile> getAudioFilesByPlayed(boolean played, Pageable pageable);
 
-  List<Album> getAlbumsByArtistId(String artistId);
+  Page<AudioFile> getAudioFilesAddedToWatchFolderAfterDate(LocalDate afterDate, Pageable pageable);
+
+  Page<AudioFile> getAudioFilesByLocationIn(Collection<String> locations, Pageable pageable);
+
+  Page<Artist> getGenreArtists(String genreId, Pageable pageable);
 
   List<Album> getAlbumsAddedAfterDate(LocalDate afterDate);
 
-  List<AudioFile> getAudioFilesByAlbumId(String albumId);
-
-  List<AudioFile> getAudioFilesByArtistId(String artistId);
-
-  Page<AudioFile> getAudioFilesByLocationIn(Collection<String> locations);
-
-  Page<AudioFile> getAudioFilesAddedAfterDate(LocalDate dateAfter, Pageable pageable);
-
   <T> Stream<T> streamByLocationStartsWith(Path basePath, Class<T> type);
-
-  void updateAudioFileLastPlaybackDate(long audioFileId);
-
-  void setNewLastRecentlyAddedDate(LocalDateTime lastRecentlyAddedDateTime);
 
   int insertAll(List<Map<String, Object>> audioFilesData);
 
   int updateAll(Map<Long, Map<String, Object>> audioFilesData);
+
+  void updateAudioFileLastPlaybackDate(long audioFileId);
 
   long deleteAllByIds(List<Long> ids);
 

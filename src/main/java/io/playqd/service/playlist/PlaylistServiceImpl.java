@@ -9,14 +9,14 @@ import io.playqd.persistence.AudioFileDao;
 import io.playqd.util.FileUtils;
 import io.playqd.util.UUIDV3Ids;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -76,7 +76,7 @@ public class PlaylistServiceImpl implements PlaylistService {
   }
 
   @Override
-  public List<AudioFile> getPlaylistAudioFiles(String playlistId) {
+  public Page<AudioFile> getPlaylistAudioFiles(String playlistId, Pageable pageable) {
     var playlistFile = getPlaylistFile(playlistId);
     try (Stream<String> lines = Files.lines(playlistFile.location())) {
       var fileLocations = lines
@@ -85,10 +85,10 @@ public class PlaylistServiceImpl implements PlaylistService {
           .filter(Objects::nonNull)
           .map(Path::toString)
           .toList();
-      return audioFileDao.getAudioFilesByLocationIn(fileLocations).getContent();
+      return audioFileDao.getAudioFilesByLocationIn(fileLocations, pageable);
     } catch (IOException e) {
-      log.error("", e);
-      return Collections.emptyList();
+      log.error("Unable to process playlist, lalala", e);
+      return Page.empty();
     }
   }
 

@@ -32,6 +32,7 @@ class PlayqdWebMvcConfigurer implements WebMvcConfigurer {
     return customizer -> customizer.modules(new JavaTimeModule());
   }
 
+  //TODO document on controller level
   private static class StringToMediaItemTypeEnumConverter implements Converter<String, MediaItemType> {
 
     @Override

@@ -2,7 +2,6 @@ package io.playqd.persistence.jpa.repository;
 
 import io.playqd.persistence.jpa.dao.AlbumsProjection;
 import io.playqd.persistence.jpa.dao.ArtistProjection;
-import io.playqd.persistence.jpa.dao.GenreProjection;
 import io.playqd.persistence.jpa.entity.AudioFileJpaEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -12,12 +11,19 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Collection;
-import java.util.List;
 import java.util.stream.Stream;
 
 public interface AudioFileRepository extends IdentityJpaRepository<AudioFileJpaEntity> {
+
+  long countByFileLastPlaybackDateIsNull();
+
+  long countByFileLastPlaybackDateIsNotNull();
+
+  long countByFileAddedToWatchFolderDateAfter(LocalDate dateAfter);
+
+  @Query("select max(a.fileAddedToWatchFolderDate) from AudioFileJpaEntity a")
+  LocalDate findMaxAddedToWatchFolderDate();
 
   AudioFileJpaEntity findFirstByAlbumId(String albumId);
 
@@ -25,11 +31,17 @@ public interface AudioFileRepository extends IdentityJpaRepository<AudioFileJpaE
 
   Page<AudioFileJpaEntity> findAllByLocationIn(Collection<String> locations, Pageable page);
 
-  List<AudioFileJpaEntity> findAllByArtistId(String artistId);
+  Page<AudioFileJpaEntity> findAllByArtistId(String artistId, Pageable page);
 
-  List<AudioFileJpaEntity> findAllByAlbumId(String albumId);
+  Page<AudioFileJpaEntity> findAllByAlbumId(String albumId, Pageable page);
+
+  Page<AudioFileJpaEntity> findAllByGenreId(String genreId, Pageable page);
+
+  Page<AudioFileJpaEntity> findByFileLastPlaybackDateIsNull(Pageable page);
 
   Page<AudioFileJpaEntity> findByFileLastPlaybackDateIsNotNull(Pageable page);
+
+  Page<AudioFileJpaEntity> findByFileAddedToWatchFolderDateAfter(LocalDate dateAfter, Pageable page);
 
   default Page<AudioFileJpaEntity> findByTrackTitleOrFileNameContainingIgnoreCase(String value, Pageable pageable) {
     return findByTrackNameContainingIgnoreCaseOrNameContainingIgnoreCase(value, value, pageable);
@@ -39,54 +51,11 @@ public interface AudioFileRepository extends IdentityJpaRepository<AudioFileJpaE
                                                                                          String filename,
                                                                                          Pageable pageable);
 
-  Page<AudioFileJpaEntity> findByCreatedDateAfter(LocalDateTime dateTimeAfter, Pageable page);
-
-  Page<AudioFileJpaEntity> findByFileAddedToWatchFolderDateAfter(LocalDate dateAfter, Pageable page);
-
-  long countByArtistId(String artistId);
-
-  long countByAlbumId(String albumId);
-
-  @Query("SELECT count(distinct a.genreId) from AudioFileJpaEntity a")
-  long countDistinctGenres();
-
-  @Query("SELECT count(distinct a.artistId) from AudioFileJpaEntity a")
-  long countDistinctArtists();
-
-  long countByFileLastPlaybackDateIsNotNull();
-
-  long countByCreatedDateAfter(LocalDateTime dateTimeAfter);
-
-  @Query("select a.artistId as id, a.artistName as name, count(distinct a.albumName) as albums, count(a.id) as tracks " +
-      "from AudioFileJpaEntity a group by a.artistId, a.artistName")
-  Page<ArtistProjection> findArtists(Pageable pageable);
-
-  @Query("select a.genreId as id, a.genre as name, " +
-      "count(distinct a.artistId) as artists, " +
-      "count(distinct a.albumId) as albums, " +
-      "count(a.id) as tracks " +
-      "from AudioFileJpaEntity a group by a.genreId, a.genre")
-  Stream<GenreProjection> streamDistinctGenres();
-
   @Query("select a.artistId as id, a.artistName as name, " +
       "count(distinct a.albumName) as albums, count(a.id) as tracks " +
       "from AudioFileJpaEntity a where a.genreId = ?1 " +
       "group by a.artistId, a.artistName")
-  Stream<ArtistProjection> streamArtistsByGenreId(String genreId);
-
-  @Query("select a.albumId as id, a.albumName as name, a.albumReleaseDate as releaseDate, " +
-      "a.genreId as genreId, a.genre as genre, " +
-      "a.artworkEmbedded as artworkEmbedded, a.artistId as artistId, a.artistName as artistName, " +
-      "count(a.id) as tracks from AudioFileJpaEntity a where a.genreId = ?1 " +
-      "group by a.albumId, a.albumName, a.albumReleaseDate, a.genreId, a.genre, a.artworkEmbedded, a.artistId, a.artistName")
-  Stream<AlbumsProjection> streamAlbumsByGenreId(String genreId);
-
-  @Query("select a.albumId as id, a.albumName as name, a.albumReleaseDate as releaseDate, " +
-      "a.fileAddedToWatchFolderDate as fileAddedToWatchFolderDate, a.genreId as genreId, a.genre as genre, " +
-      "a.artworkEmbedded as artworkEmbedded, a.artistId as artistId, a.artistName as artistName, " +
-      "count(a.id) as tracks from AudioFileJpaEntity a where a.artistId = ?1 " +
-      "group by a.albumId, a.albumName, a.albumReleaseDate, a.genreId, a.genre, a.artworkEmbedded, a.artistId, a.artistName")
-  Stream<AlbumsProjection> streamAlbumsByArtistId(String artistId);
+  Page<ArtistProjection> findArtistsByGenreId(String genreId, Pageable pageable);
 
   @Query("select a.albumId as id, a.albumName as name, a.albumReleaseDate as releaseDate, " +
       "a.fileAddedToWatchFolderDate as addedToWatchFolderDate, a.genreId as genreId, a.genre as genre, " +

@@ -3,9 +3,6 @@ package io.playqd.persistence.jpa.dao;
 import io.playqd.commons.data.Album;
 import io.playqd.commons.data.Artist;
 import io.playqd.commons.data.Genre;
-import io.playqd.model.MediaItemFilter;
-import io.playqd.model.MediaItemType;
-import io.playqd.persistence.AudioFileDao;
 import io.playqd.persistence.MetadataReaderDao;
 import io.playqd.persistence.jpa.entity.view.AlbumViewEntity;
 import io.playqd.persistence.jpa.entity.view.ArtistViewEntity;
@@ -22,51 +19,31 @@ import org.springframework.stereotype.Component;
 @Component
 class JpaMetadataReaderDao implements MetadataReaderDao {
 
-  private final ArtistViewRepository artistViewRepository;
   private final AlbumViewRepository albumViewRepository;
   private final GenreViewRepository genreViewRepository;
-  private final AudioFileDao audioFileDao;
+  private final ArtistViewRepository artistViewRepository;
 
   JpaMetadataReaderDao(ArtistViewRepository artistViewRepository,
                        AlbumViewRepository albumViewRepository,
-                       GenreViewRepository genreViewRepository,
-                       AudioFileDao audioFileDao) {
+                       GenreViewRepository genreViewRepository) {
     this.artistViewRepository = artistViewRepository;
     this.albumViewRepository = albumViewRepository;
     this.genreViewRepository = genreViewRepository;
-    this.audioFileDao = audioFileDao;
   }
 
   @Override
-  public long count(MediaItemType mediaItemType, MediaItemFilter filter) {
-    switch (mediaItemType) {
-      case ARTIST -> {
-         return artistViewRepository.count();
-      }
-      case GENRE -> {
-        return genreViewRepository.count();
-      }
-      case TRACK -> {
-        if (filter == null) {
-          return 0;
-        }
-        switch (filter) {
-          case liked -> {
-            return 0;
-          }
-          case played -> {
-            return audioFileDao.countPlayed();
-          }
-          case recentlyAdded -> {
-            return audioFileDao.countRecentlyAdded();
-          }
-        }
-      }
-      default -> {
-        return 0;
-      }
-    }
-    return 0;
+  public long countArtists() {
+    return artistViewRepository.count();
+  }
+
+  @Override
+  public long countAlbums() {
+    return albumViewRepository.count();
+  }
+
+  @Override
+  public long countGenres() {
+    return genreViewRepository.count();
   }
 
   @Override

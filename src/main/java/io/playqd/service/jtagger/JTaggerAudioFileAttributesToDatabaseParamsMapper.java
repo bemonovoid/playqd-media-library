@@ -59,7 +59,7 @@ public class JTaggerAudioFileAttributesToDatabaseParamsMapper extends CommonFile
       var jTaggerAudioFile = AudioFileIO.read(file);
       var fileName = FileUtils.getFileNameWithoutExtension(file.getName());
 
-      var params = new LinkedHashMap<String, Object>();
+      var params = new LinkedHashMap<>(super.toSqlParams(path));
 
       // Audio
       params.put(AudioFileJpaEntity.COL_FORMAT, jTaggerAudioFile.getAudioHeader().getFormat());
@@ -73,6 +73,7 @@ public class JTaggerAudioFileAttributesToDatabaseParamsMapper extends CommonFile
       // Artist
       var artistName = getArtistName(jTaggerAudioFile);
       var artistId = UUIDS.computeIfAbsent(artistName, UUIDV3Ids::create);
+
       params.put(AudioFileJpaEntity.COL_ARTIST_NAME, artistName);
       params.put(AudioFileJpaEntity.COL_ARTIST_ID, artistId);
       params.put(AudioFileJpaEntity.COL_ARTIST_COUNTRY,
@@ -129,8 +130,6 @@ public class JTaggerAudioFileAttributesToDatabaseParamsMapper extends CommonFile
 
       // Defaults
       params.put(AudioFileJpaEntity.COL_FILE_PLAYBACK_COUNT, 0);
-
-      params.putAll(super.toSqlParams(path));
 
       return params;
     } catch (Exception e) {

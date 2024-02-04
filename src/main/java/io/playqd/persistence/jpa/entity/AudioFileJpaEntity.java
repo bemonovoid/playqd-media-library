@@ -93,6 +93,7 @@ public class AudioFileJpaEntity extends PersistableAuditableEntity implements Au
       COL_ALBUM_NAME, COL_ALBUM_RELEASE_DATE, COL_TRACK_NAME, COL_TRACK_NUMBER,
       COL_ARTWORK_EMBEDDED, COL_MB_ARTIST_ID, COL_MB_RELEASE_GROUP_ID, COL_MB_RELEASE_TYPE,
       COL_COMMENT, COL_LYRICS, COL_GENRE);
+
   @Column(name = COL_ARTIST_ID, nullable = false)
   private String artistId;
   @Column(name = COL_ALBUM_ID, nullable = false)

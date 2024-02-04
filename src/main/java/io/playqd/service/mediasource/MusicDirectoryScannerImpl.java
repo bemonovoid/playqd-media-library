@@ -1,13 +1,16 @@
 package io.playqd.service.mediasource;
 
 import io.playqd.exception.MediaSourceScannerException;
+import io.playqd.model.event.AudioFileMetadataAddedEvent;
 import io.playqd.persistence.AudioFileDao;
 import io.playqd.persistence.MusicDirectoryDao;
+import io.playqd.persistence.jpa.entity.AudioFileJpaEntity;
 import io.playqd.service.metadata.AudioFileAttributes;
 import io.playqd.service.metadata.FileAttributesToSqlParamsMapper;
 import io.playqd.util.SupportedAudioFiles;
 import io.playqd.util.TimeUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +20,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Collections;
@@ -35,12 +39,15 @@ public class MusicDirectoryScannerImpl implements MusicDirectoryScanner {
 
   private final AudioFileDao audioFileDao;
   private final MusicDirectoryDao musicDirectoryDao;
+  private final ApplicationEventPublisher eventPublisher;
   private final FileAttributesToSqlParamsMapper fileAttributesMapper;
 
   public MusicDirectoryScannerImpl(AudioFileDao audioFileDao,
                                    MusicDirectoryDao musicDirectoryDao,
+                                   ApplicationEventPublisher eventPublisher,
                                    FileAttributesToSqlParamsMapper fileAttributesMapper) {
     this.audioFileDao = audioFileDao;
+    this.eventPublisher = eventPublisher;
     this.musicDirectoryDao = musicDirectoryDao;
     this.fileAttributesMapper = fileAttributesMapper;
   }
@@ -154,16 +161,35 @@ public class MusicDirectoryScannerImpl implements MusicDirectoryScanner {
   }
 
   private void addNewMetadata(List<Map<String, Object>> newItemsInsertParams) {
-    if (!newItemsInsertParams.isEmpty()) {
-      audioFileDao.insertAll(newItemsInsertParams);
-      audioFileDao.setNewLastRecentlyAddedDate(LocalDateTime.now());
+    if (newItemsInsertParams.isEmpty()) {
+      return;
     }
+
+    var isFirstScan = audioFileDao.isEmpty();
+
+    audioFileDao.insertAll(newItemsInsertParams);
+
+    var latestAddedDate = audioFileDao.findLatestAddedToWatchFolderDate();
+
+    var newOldestAddedDate = newItemsInsertParams.stream()
+        .map(map -> map.get(AudioFileJpaEntity.COL_FILE_ADDED_TO_WATCH_FOLDER_DATE))
+        .map(LocalDate.class::cast)
+        .sorted() // ASC sorting by default. If there were 3 missed additions, take the oldest date
+        .findFirst()
+        .orElse(latestAddedDate);
+
+    if (isFirstScan) {
+      newOldestAddedDate = latestAddedDate;
+    }
+
+    eventPublisher.publishEvent(new AudioFileMetadataAddedEvent(newItemsInsertParams.size(), newOldestAddedDate));
   }
 
   private void updateModifiedMetadata(Map<Long, Map<String, Object>> modifiedItemsInsertParams) {
-    if (!modifiedItemsInsertParams.isEmpty()) {
-      audioFileDao.updateAll(modifiedItemsInsertParams);
+    if (modifiedItemsInsertParams.isEmpty()) {
+      return;
     }
+    audioFileDao.updateAll(modifiedItemsInsertParams);
   }
 
 }
