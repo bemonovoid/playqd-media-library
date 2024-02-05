@@ -31,6 +31,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -102,7 +103,7 @@ class MetadataController {
                      @RequestParam(name = "played", required = false) Boolean played,
                      @RequestParam(name = "lastRecentlyAdded", required = false) boolean lastRecentlyAdded,
                      @RequestParam(name = "recentlyAddedSinceDuration", required = false) String recentlyAddedSinceDuration,
-                     @RequestParam(name = "locations", required = false) Set<String> locations) {
+                     @RequestParam(name = "locations", required = false) List<String> locations) {
     if (StringUtils.hasLength(artistId)) {
       return audioFileDao.getAudioFilesByArtistId(artistId, page).map(this::mapToTrack);
     }
@@ -116,7 +117,8 @@ class MetadataController {
     }
 
     if (StringUtils.hasLength(playlistId)) {
-      return playlistService.getPlaylistAudioFiles(playlistId, page).map(this::mapToTrack);
+      var playlistFiles = playlistService.playlistFiles(playlistId);
+      return audioFileDao.getAudioFilesByLocationIn(playlistFiles, page).map(this::mapToTrack);
     }
 
     if (StringUtils.hasText(title)) {

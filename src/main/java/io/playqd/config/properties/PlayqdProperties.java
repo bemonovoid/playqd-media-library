@@ -8,6 +8,7 @@ import org.springframework.validation.annotation.Validated;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -23,6 +24,8 @@ public class PlayqdProperties {
 
   @NotEmpty
   private Set<MusicDirectoryProperties> sources;
+
+  private PlaylistsProperties playlists = new PlaylistsProperties();
 
   public Path getWorkingDirOrDefault() {
     return Optional.ofNullable(workingDir)

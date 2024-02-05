@@ -21,6 +21,8 @@ public interface AudioFile {
 
   String name();
 
+  long sourceDirId();
+
   String location();
 
   default Path path() {

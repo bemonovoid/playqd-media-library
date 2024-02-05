@@ -2,9 +2,11 @@ package io.playqd.service.jtagger;
 
 import io.playqd.exception.AudioMetadataReadException;
 import io.playqd.persistence.jpa.entity.AudioFileJpaEntity;
+import io.playqd.service.AudioFilePathResolver;
 import io.playqd.service.MetadataFileReader;
 import io.playqd.service.metadata.CommonFileAttributesToSqlParamsMapper;
 import io.playqd.service.metadata.MetadataFile;
+import io.playqd.service.metadata.ParamsMapperContext;
 import io.playqd.util.FileUtils;
 import io.playqd.util.UUIDV3Ids;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +19,6 @@ import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -37,7 +38,9 @@ public class JTaggerAudioFileAttributesToDatabaseParamsMapper extends CommonFile
 
   private final MetadataFileReader metadataFileReader;
 
-  public JTaggerAudioFileAttributesToDatabaseParamsMapper(MetadataFileReader metadataFileReader) {
+  public JTaggerAudioFileAttributesToDatabaseParamsMapper(MetadataFileReader metadataFileReader,
+                                                          AudioFilePathResolver audioFilePathResolver) {
+    super(audioFilePathResolver);
     this.metadataFileReader = metadataFileReader;
   }
 
@@ -49,17 +52,18 @@ public class JTaggerAudioFileAttributesToDatabaseParamsMapper extends CommonFile
   }
 
   /**
-   * @param path to read audio metadata from
+   * @param context to read audio metadata from
    * @return
    * @throws AudioMetadataReadException
    */
-  public Map<String, Object> toSqlParams(Path path) {
+  public Map<String, Object> toSqlParams(ParamsMapperContext context) {
+    var path = context.path();
     try {
       var file = path.toFile();
       var jTaggerAudioFile = AudioFileIO.read(file);
       var fileName = FileUtils.getFileNameWithoutExtension(file.getName());
 
-      var params = new LinkedHashMap<>(super.toSqlParams(path));
+      var params = new LinkedHashMap<>(super.toSqlParams(context));
 
       // Audio
       params.put(AudioFileJpaEntity.COL_FORMAT, jTaggerAudioFile.getAudioHeader().getFormat());
@@ -203,8 +207,5 @@ public class JTaggerAudioFileAttributesToDatabaseParamsMapper extends CommonFile
     } catch (IOException e) {
       return MetadataFile.emptyFile();
     }
-
   }
-
-
 }

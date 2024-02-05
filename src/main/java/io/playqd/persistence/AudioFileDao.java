@@ -43,11 +43,13 @@ public interface AudioFileDao {
 
   Page<AudioFile> getAudioFilesAddedToWatchFolderAfterDate(LocalDate afterDate, Pageable pageable);
 
-  Page<AudioFile> getAudioFilesByLocationIn(Collection<String> locations, Pageable pageable);
+  Page<AudioFile> getAudioFilesByLocationIn(List<String> locations, Pageable pageable);
 
   Page<Artist> getGenreArtists(String genreId, Pageable pageable);
 
   List<Album> getAlbumsAddedAfterDate(LocalDate afterDate);
+
+  <T> Stream<T> streamBySourceDirId(long sourceDirId, Class<T> type);
 
   <T> Stream<T> streamByLocationStartsWith(Path basePath, Class<T> type);
 

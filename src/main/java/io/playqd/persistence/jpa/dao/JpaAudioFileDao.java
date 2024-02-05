@@ -2,6 +2,7 @@ package io.playqd.persistence.jpa.dao;
 
 import io.playqd.commons.data.Album;
 import io.playqd.commons.data.Artist;
+import io.playqd.commons.utils.Tuple;
 import io.playqd.model.AudioFile;
 import io.playqd.persistence.AudioFileDao;
 import io.playqd.persistence.jpa.entity.AudioFileJpaEntity;
@@ -9,6 +10,7 @@ import io.playqd.persistence.jpa.entity.PersistableAuditableEntity;
 import io.playqd.persistence.jpa.repository.AudioFileRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -22,11 +24,13 @@ import org.springframework.util.CollectionUtils;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.Collection;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 @Slf4j
@@ -97,8 +101,9 @@ public class JpaAudioFileDao implements AudioFileDao {
   }
 
   @Override
-  public Page<AudioFile> getAudioFilesByLocationIn(Collection<String> locations, Pageable pageable) {
-    return audioFileRepository.findAllByLocationIn(locations, pageable).map(entity -> entity);
+  public Page<AudioFile> getAudioFilesByLocationIn(List<String> locations, Pageable pageable) {
+    var result = audioFileRepository.findAllByLocationIn(locations, pageable);
+    return sortByLocationsOrder(locations, result).map(entity -> entity);
   }
 
   @Override
@@ -139,6 +144,12 @@ public class JpaAudioFileDao implements AudioFileDao {
   @Override
   public Page<AudioFile> getAudioFilesAddedToWatchFolderAfterDate(LocalDate afterDate, Pageable pageable) {
     return audioFileRepository.findByFileAddedToWatchFolderDateAfter(afterDate, pageable).map(entity -> entity);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public <T> Stream<T> streamBySourceDirId(long sourceDirId, Class<T> type) {
+    return audioFileRepository.findBySourceDirId(sourceDirId, type);
   }
 
   @Override
@@ -229,5 +240,20 @@ public class JpaAudioFileDao implements AudioFileDao {
         projection.getArtworkEmbedded(),
         projection.getAddedToWatchFolderDate(),
         projection.getTracks());
+  }
+
+  private static Page<AudioFileJpaEntity> sortByLocationsOrder(List<String> locations,
+                                                               Page<AudioFileJpaEntity> audioFiles) {
+    Map<String, Integer> locationsOrder = IntStream.range(0, locations.size())
+        .boxed()
+        .collect(Collectors.toMap(locations::get, i -> i));
+
+    var result = audioFiles.getContent().stream()
+        .map(e -> Tuple.from(locationsOrder.get(e.location()), e))
+        .sorted(Comparator.comparing(Tuple::left))
+        .map(Tuple::right)
+        .toList();
+
+    return new PageImpl<>(result, audioFiles.getPageable(), result.size());
   }
 }

@@ -4,6 +4,7 @@ dependencyResolutionManagement {
     versionCatalogs {
         libs {
             version('jibPlugin', '3.4.0')
+//            version('fasterXml', '2.15.3')
             version('springDependencyPlugin', '1.1.0')
             version('lombok', '1.18.30')
             version('ehcache', '3.10.8')
@@ -18,6 +19,7 @@ dependencyResolutionManagement {
 
             library('ehcache', 'org.ehcache', 'ehcache').versionRef('ehcache')
             library('lombok', 'org.projectlombok', 'lombok').versionRef('lombok')
+            library('jackson-xml-databind', 'com.fasterxml.jackson.dataformat', 'jackson-dataformat-xml').withoutVersion()
             library('flyway-db', 'org.flywaydb', 'flyway-core').versionRef('flywaydb')
             library('flyway-mysql', 'org.flywaydb', 'flyway-mysql').versionRef('flywaydb')
             library('h2', 'com.h2database', 'h2').version('2.2.222')

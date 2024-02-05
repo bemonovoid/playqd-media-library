@@ -5,10 +5,8 @@ import io.playqd.config.lifecycle.MusicDirectoryInitializer;
 import io.playqd.config.properties.PlayqdProperties;
 import io.playqd.persistence.AudioFileDao;
 import io.playqd.persistence.MusicDirectoryDao;
-import io.playqd.persistence.MusicDirectoryInfoDao;
-import io.playqd.persistence.jpa.dao.JpaMusicDirectoryInfoDao;
-import io.playqd.persistence.jpa.repository.MusicDirectoryInfoRepository;
 import io.playqd.persistence.simple.MusicDirectoryDaoImpl;
+import io.playqd.service.AudioFilePathResolver;
 import io.playqd.service.mediasource.MusicDirectoryManager;
 import io.playqd.service.mediasource.MusicDirectoryManagerImpl;
 import io.playqd.service.mediasource.MusicDirectoryScanner;
@@ -26,11 +24,6 @@ import org.springframework.core.annotation.Order;
 public class MusicDirectoryContextConfiguration {
 
   @Bean
-  MusicDirectoryInfoDao musicDirectoryInfoDao(MusicDirectoryInfoRepository musicDirectoryInfoRepository) {
-    return new JpaMusicDirectoryInfoDao(musicDirectoryInfoRepository);
-  }
-
-  @Bean
   MusicDirectoryDao mediaSourceDao() {
     return new MusicDirectoryDaoImpl();
   }
@@ -44,9 +37,10 @@ public class MusicDirectoryContextConfiguration {
   MusicDirectoryScanner mediaSourceScanner(AudioFileDao audioFileDao,
                                            MusicDirectoryDao musicDirectoryDao,
                                            ApplicationEventPublisher eventPublisher,
+                                           AudioFilePathResolver audioFilePathResolver,
                                            FileAttributesToSqlParamsMapper fileAttributesToSqlParamsMapper) {
     return new MusicDirectoryScannerImpl(
-        audioFileDao, musicDirectoryDao, eventPublisher, fileAttributesToSqlParamsMapper);
+        audioFileDao, musicDirectoryDao, eventPublisher, audioFilePathResolver, fileAttributesToSqlParamsMapper);
   }
 
   @Bean

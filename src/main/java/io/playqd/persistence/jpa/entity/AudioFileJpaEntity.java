@@ -48,6 +48,7 @@ public class AudioFileJpaEntity extends PersistableAuditableEntity implements Au
   public static final String COL_LOCATION = "location";
   public static final String COL_EXTENSION = "extension";
   public static final String COL_MIME_TYPE = "mime_type";
+  public static final String COL_SOURCE_DIR_ID = "source_dir_id";
   public static final String COL_FILE_PLAYBACK_COUNT = "file_playback_count";
   public static final String COL_FILE_LAST_PLAYBACK_DATE = "file_last_playback_date";
   public static final String COL_FILE_LAST_SCANNED_DATE = "file_last_scanned_date";
@@ -73,9 +74,9 @@ public class AudioFileJpaEntity extends PersistableAuditableEntity implements Au
   public static final String COL_TRACK_LENGTH = "track_length";
   public static final String COL_PRECISE_TRACK_LENGTH = "precise_track_length";
 
-  public static final String COL_COMMENT = "comment";
-  public static final String COL_LYRICS = "lyrics";
   public static final String COL_GENRE = "genre";
+  public static final String COL_LYRICS = "lyrics";
+  public static final String COL_COMMENT = "comment";
 
   public static final String COL_ARTWORK_EMBEDDED = "artwork_embedded";
 
@@ -106,6 +107,8 @@ public class AudioFileJpaEntity extends PersistableAuditableEntity implements Au
   private String name;
   @Column(name = COL_SIZE)
   private long size;
+  @Column(name = COL_SOURCE_DIR_ID, nullable = false)
+  private long sourceDirId;
   @Column(name = COL_LOCATION, columnDefinition = "LONGTEXT")
   private String location;
   @Column(name = COL_EXTENSION)

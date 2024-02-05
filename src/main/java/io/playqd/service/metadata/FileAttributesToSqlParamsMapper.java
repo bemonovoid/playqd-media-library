@@ -6,6 +6,6 @@ import java.util.Map;
 @FunctionalInterface
 public interface FileAttributesToSqlParamsMapper {
 
-  Map<String, Object> toSqlParams(Path path);
+  Map<String, Object> toSqlParams(ParamsMapperContext context);
 
 }

@@ -27,8 +27,6 @@ public interface AudioFileRepository extends IdentityJpaRepository<AudioFileJpaE
 
   AudioFileJpaEntity findFirstByAlbumId(String albumId);
 
-  <T> Stream<T> findByLocationIsStartingWith(String basePath, Class<T> type);
-
   Page<AudioFileJpaEntity> findAllByLocationIn(Collection<String> locations, Pageable page);
 
   Page<AudioFileJpaEntity> findAllByArtistId(String artistId, Pageable page);
@@ -63,6 +61,10 @@ public interface AudioFileRepository extends IdentityJpaRepository<AudioFileJpaE
       "count(a.id) as tracks from AudioFileJpaEntity a where a.fileAddedToWatchFolderDate > ?1 " +
       "group by a.albumId, a.albumName, a.fileAddedToWatchFolderDate, a.albumReleaseDate, a.genreId, a.genre, a.artworkEmbedded, a.artistId, a.artistName")
   Stream<AlbumsProjection> streamAlbumsAddedAfterDate(LocalDate afterDate, Pageable pageable);
+
+  <T> Stream<T> findBySourceDirId(long sourceDirId, Class<T> type);
+
+  <T> Stream<T> findByLocationIsStartingWith(String basePath, Class<T> type);
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Transactional

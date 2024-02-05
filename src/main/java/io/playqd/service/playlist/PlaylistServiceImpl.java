@@ -1,57 +1,80 @@
 package io.playqd.service.playlist;
 
-import io.playqd.config.properties.PlayqdProperties;
-import io.playqd.exception.PlayqdException;
-import io.playqd.model.AudioFile;
-import io.playqd.model.M3u8PlaylistFile;
-import io.playqd.model.PlaylistFile;
-import io.playqd.persistence.AudioFileDao;
-import io.playqd.util.FileUtils;
-import io.playqd.util.UUIDV3Ids;
+import io.playqd.commons.data.Playlist;
+import io.playqd.commons.data.PlaylistFormat;
+import io.playqd.service.AudioFilePathResolver;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
 @Slf4j
 public class PlaylistServiceImpl implements PlaylistService {
 
-  private static final Set<String> SUPPORTED_FORMATS = Set.of("m3u8");
+  private static final Map<String, Playlist> PLAYLIST_FILES_CACHE = new HashMap<>();
+  private static final EnumSet<PlaylistFormat> SUPPORTED_FORMATS = EnumSet.of(PlaylistFormat.m3u8);
 
-  private final Map<String, PlaylistFilePath> playlistFileRefs = new HashMap<>();
+  private final AudioFilePathResolver audioFilePathResolver;
+  private final Set<PlaylistFilesFetcher> playlistFilesFetchers;
 
-  private final Path playlistsDir;
-  private final AudioFileDao audioFileDao;
-
-  public PlaylistServiceImpl(PlayqdProperties playqdProperties, AudioFileDao audioFileDao) {
-    this.audioFileDao = audioFileDao;
-    this.playlistsDir = playqdProperties.getPlaylistsDir();
+  public PlaylistServiceImpl(AudioFilePathResolver audioFilePathResolver,
+                             Set<PlaylistFilesFetcher> playlistFilesFetchers) {
+    this.audioFilePathResolver = audioFilePathResolver;
+    this.playlistFilesFetchers = playlistFilesFetchers;
   }
 
-  private static PlaylistFile createPlaylistFromFile(Path path) {
-    var fileNameExtension = FileUtils.getFileNameAndExtension(path.getFileName().toString());
-    return new M3u8PlaylistFile(fileNameExtension.left(), fileNameExtension.left(), path, countPlaylistItems(path));
+  @Override
+  public List<Playlist> getPlaylists() {
+    return playlistFilesFetchers.stream()
+        .flatMap(playlistFilesFetcher -> playlistFilesFetcher.fetch().stream())
+        .peek(playlistFile -> PLAYLIST_FILES_CACHE.putIfAbsent(playlistFile.id(), playlistFile))
+        .toList();
   }
 
-  private static long countPlaylistItems(Path path) {
-    try (Stream<String> lines = Files.lines(path)) {
+  @Override
+  public List<String> playlistFiles(String playlistId) {
+    if (PLAYLIST_FILES_CACHE.isEmpty()) {
+      getPlaylists();
+    }
+    if (!PLAYLIST_FILES_CACHE.containsKey(playlistId)) {
+      log.warn("Playlist with id: '{}' was not found or does not exist.", playlistId);
+      return Collections.emptyList();
+    }
+    var playlistFile = PLAYLIST_FILES_CACHE.get(playlistId);
+
+    if (!Files.exists(playlistFile.location())) {
+      log.error("File '{}' for playlist with id: '{}' does not exist.", playlistFile.location(), playlistId);
+      return Collections.emptyList();
+    }
+
+    if (!SUPPORTED_FORMATS.contains(playlistFile.format())) {
+      log.error("Unsupported playlist format: '{}' for playlist with id: '{}'.", playlistFile.format(), playlistId);
+      return Collections.emptyList();
+    }
+
+    try (Stream<String> lines = Files.lines(playlistFile.location())) {
       return lines
-          .filter(line -> !line.startsWith("#"))
-          .filter(line -> getValidPath(line) != null)
-          .count();
+          // Some players(winamp) prepend '\uFEFF' 65279 to the first line: '#EXT'
+          .filter(line -> line.charAt(0) != '#' && line.charAt(0) != '\uFEFF')
+          .map(PlaylistServiceImpl::getValidPath)
+          .filter(Objects::nonNull)
+          .map(audioFilePathResolver::relativize)
+          .filter(Objects::nonNull)
+          .map(Path::toString)
+          .toList();
     } catch (IOException e) {
-      log.error("Count failed.", e);
-      return 0;
+      log.error("Unable to process playlist with id: %s.", e);
+      return Collections.emptyList();
     }
   }
 
@@ -62,49 +85,5 @@ public class PlaylistServiceImpl implements PlaylistService {
       log.warn("Path wasn't a valid file.", e);
       return null;
     }
-  }
-
-  public PlaylistFile getPlaylistFile(String playlistId) {
-    var playlistFileRef = playlistFileRefs.computeIfAbsent(playlistId, key -> findPlaylistFileRef(key).orElse(null));
-    if (playlistFileRef == null) {
-      throw new PlayqdException("Not found");
-    }
-    var playlistLocation = playlistFileRef.location();
-    var nameAndFormat = FileUtils.getFileNameAndExtension(playlistLocation.toString());
-    return new M3u8PlaylistFile(
-        nameAndFormat.left(), nameAndFormat.right(), playlistLocation, countPlaylistItems(playlistLocation));
-  }
-
-  @Override
-  public Page<AudioFile> getPlaylistAudioFiles(String playlistId, Pageable pageable) {
-    var playlistFile = getPlaylistFile(playlistId);
-    try (Stream<String> lines = Files.lines(playlistFile.location())) {
-      var fileLocations = lines
-          .filter(line -> !line.startsWith("#"))
-          .map(PlaylistServiceImpl::getValidPath)
-          .filter(Objects::nonNull)
-          .map(Path::toString)
-          .toList();
-      return audioFileDao.getAudioFilesByLocationIn(fileLocations, pageable);
-    } catch (IOException e) {
-      log.error("Unable to process playlist, lalala", e);
-      return Page.empty();
-    }
-  }
-
-  private Optional<PlaylistFilePath> findPlaylistFileRef(String playlistId) {
-    try (Stream<Path> files = Files.list(playlistsDir)) {
-      return files
-          .filter(path -> SUPPORTED_FORMATS.contains(FileUtils.getFileExtension(path)))
-          .filter(path -> UUIDV3Ids.create(path.toString()).equals(playlistId))
-          .map(PlaylistFilePath::new)
-          .findFirst();
-    } catch (IOException e) {
-      return Optional.empty();
-    }
-  }
-
-  private record PlaylistFilePath(Path location) {
-
   }
 }

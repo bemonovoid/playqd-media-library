@@ -10,5 +10,5 @@ import org.springframework.validation.annotation.Validated;
 @Setter(AccessLevel.PACKAGE)
 public class PlaylistsProperties {
 
-  private ImportedPlaylistsProperties imported = new ImportedPlaylistsProperties();
+  private WinampPlaylistProperties winamp;
 }

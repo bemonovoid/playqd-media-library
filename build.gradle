@@ -34,6 +34,7 @@ dependencies {
     implementation libs.flyway.db
     implementation libs.flyway.mysql
     implementation libs.ehcache
+    implementation libs.jackson.xml.databind
     implementation libs.apache.tika
     implementation libs.jaudiotagger
     implementation libs.micrometer.prometheus
