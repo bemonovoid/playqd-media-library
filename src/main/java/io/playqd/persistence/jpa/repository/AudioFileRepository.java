@@ -25,9 +25,15 @@ public interface AudioFileRepository extends IdentityJpaRepository<AudioFileJpaE
   @Query("select max(a.fileAddedToWatchFolderDate) from AudioFileJpaEntity a")
   LocalDate findMaxAddedToWatchFolderDate();
 
+  AudioFileJpaEntity findByTrackId(String trackId);
+
   AudioFileJpaEntity findFirstByAlbumId(String albumId);
 
   Page<AudioFileJpaEntity> findAllByLocationIn(Collection<String> locations, Pageable page);
+
+  Page<AudioFileJpaEntity> findAllBySourceDirIdAndLocationIn(long sourceDirId,
+                                                             Collection<String> locations,
+                                                             Pageable page);
 
   Page<AudioFileJpaEntity> findAllByArtistId(String artistId, Pageable page);
 

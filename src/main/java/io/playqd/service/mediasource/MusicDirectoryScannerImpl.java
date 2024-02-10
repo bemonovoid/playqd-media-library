@@ -6,7 +6,7 @@ import io.playqd.model.event.AudioFileMetadataAddedEvent;
 import io.playqd.persistence.AudioFileDao;
 import io.playqd.persistence.MusicDirectoryDao;
 import io.playqd.persistence.jpa.entity.AudioFileJpaEntity;
-import io.playqd.service.AudioFilePathResolver;
+import io.playqd.service.MusicDirectoryPathResolver;
 import io.playqd.service.metadata.AudioFileAttributes;
 import io.playqd.service.metadata.FileAttributesToSqlParamsMapper;
 import io.playqd.service.metadata.ParamsMapperContext;
@@ -43,19 +43,19 @@ public class MusicDirectoryScannerImpl implements MusicDirectoryScanner {
   private final AudioFileDao audioFileDao;
   private final MusicDirectoryDao musicDirectoryDao;
   private final ApplicationEventPublisher eventPublisher;
-  private final AudioFilePathResolver audioFilePathResolver;
+  private final MusicDirectoryPathResolver musicDirectoryPathResolver;
   private final FileAttributesToSqlParamsMapper fileAttributesMapper;
 
   public MusicDirectoryScannerImpl(AudioFileDao audioFileDao,
                                    MusicDirectoryDao musicDirectoryDao,
                                    ApplicationEventPublisher eventPublisher,
-                                   AudioFilePathResolver audioFilePathResolver,
+                                   MusicDirectoryPathResolver musicDirectoryPathResolver,
                                    FileAttributesToSqlParamsMapper fileAttributesMapper) {
     this.audioFileDao = audioFileDao;
     this.eventPublisher = eventPublisher;
     this.musicDirectoryDao = musicDirectoryDao;
     this.fileAttributesMapper = fileAttributesMapper;
-    this.audioFilePathResolver = audioFilePathResolver;
+    this.musicDirectoryPathResolver = musicDirectoryPathResolver;
   }
 
   private static Predicate<Path> ignoredDirs(Set<String> ignoredDirs) {
@@ -108,14 +108,14 @@ public class MusicDirectoryScannerImpl implements MusicDirectoryScanner {
       Stream<AudioFileAttributes> prevScannedAudioFilesStream;
 
       if (subPath != null) {
-        var relativePath = audioFilePathResolver.relativize(subPath);
+        var relativePath = musicDirectoryPathResolver.relativize(subPath);
         prevScannedAudioFilesStream = audioFileDao.streamByLocationStartsWith(relativePath, AudioFileAttributes.class);
       } else {
         prevScannedAudioFilesStream = audioFileDao.streamBySourceDirId(dirId, AudioFileAttributes.class);
       }
 
       var prevScannedAudioFiles = Collections.synchronizedMap(
-          prevScannedAudioFilesStream.collect(Collectors.toMap(audioFilePathResolver::unRelativize, value -> value)));
+          prevScannedAudioFilesStream.collect(Collectors.toMap(musicDirectoryPathResolver::unRelativize, value -> value)));
 
       var newAudioFiles = Collections.synchronizedList(new LinkedList<Map<String, Object>>());
       var modifiedAudioFiles = Collections.synchronizedMap(new LinkedHashMap<Long, Map<String, Object>>());
@@ -204,7 +204,7 @@ public class MusicDirectoryScannerImpl implements MusicDirectoryScanner {
 
   private MusicDirectory getMusicDirectory(long dirId, Path path) {
     if (path != null) {
-      return audioFilePathResolver.resolveSourceDir(path)
+      return musicDirectoryPathResolver.resolveSourceDir(path)
           .orElseThrow(() -> new MediaSourceScannerException(String.format("Location does not exist: %s", path)));
     } else {
       return musicDirectoryDao.get(dirId);

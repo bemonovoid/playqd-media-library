@@ -2,6 +2,7 @@ package io.playqd.api.controller;
 
 import io.playqd.model.event.AudioFileByteStreamRequestedEvent;
 import io.playqd.persistence.AudioFileDao;
+import io.playqd.service.MusicDirectoryPathResolver;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.FileSystemResource;
@@ -27,10 +28,14 @@ class AudioStreamController {
 
   private final AudioFileDao audioFileDao;
   private final ApplicationEventPublisher eventPublisher;
+  private final MusicDirectoryPathResolver musicDirectoryPathResolver;
 
-  AudioStreamController(AudioFileDao audioFileDao, ApplicationEventPublisher eventPublisher) {
+  AudioStreamController(AudioFileDao audioFileDao,
+                        ApplicationEventPublisher eventPublisher,
+                        MusicDirectoryPathResolver musicDirectoryPathResolver) {
     this.audioFileDao = audioFileDao;
     this.eventPublisher = eventPublisher;
+    this.musicDirectoryPathResolver = musicDirectoryPathResolver;
   }
 
   /**
@@ -40,15 +45,16 @@ class AudioStreamController {
    * @param httpHeaders
    * @return Audio file stream at the given byte range.
    */
-  @GetMapping("/{audioFileId}")
-  ResponseEntity<Resource> audioTrackStream(@PathVariable long audioFileId, @RequestHeader HttpHeaders httpHeaders) {
+  @GetMapping("/{trackId}")
+  ResponseEntity<Resource> audioTrackStream(@PathVariable String trackId, @RequestHeader HttpHeaders httpHeaders) {
 
-    var audioFile = audioFileDao.getAudioFile(audioFileId);
+    var audioFile = audioFileDao.getAudioFileByTrackId(trackId);
+    var audioFilePath = musicDirectoryPathResolver.unRelativize(audioFile);
 
     log.info("\n---Processed audio streaming info---\nTrack id: {}\nRange: {}\nResource externalUrl: {}\nContent-Type: {}",
-        audioFileId,
+        trackId,
         Arrays.toString(httpHeaders.getRange().toArray()),
-        audioFile.location(),
+        audioFilePath,
         audioFile.mimeType());
 
     getHttpRangeRequestIfExists(httpHeaders).ifPresentOrElse(
@@ -62,7 +68,7 @@ class AudioStreamController {
 
     return ResponseEntity.ok()
         .header(HttpHeaders.CONTENT_TYPE, audioFile.mimeType())
-        .body(new FileSystemResource(audioFile.path()));
+        .body(new FileSystemResource(audioFilePath));
   }
 
   private Optional<HttpRange> getHttpRangeRequestIfExists(HttpHeaders httpHeaders) {
@@ -80,5 +86,4 @@ class AudioStreamController {
     }
     return Optional.of(httpHeaders.getRange().get(0));
   }
-
 }

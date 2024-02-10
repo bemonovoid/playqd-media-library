@@ -5,21 +5,22 @@ import io.playqd.commons.data.Album;
 import io.playqd.commons.data.AlbumQueryParams;
 import io.playqd.commons.data.Artist;
 import io.playqd.commons.data.ArtistQueryParams;
+import io.playqd.commons.data.DirectoryItem;
 import io.playqd.commons.data.Genre;
+import io.playqd.commons.data.ItemType;
 import io.playqd.commons.data.Track;
 import io.playqd.model.AudioFile;
 import io.playqd.persistence.AudioFileDao;
 import io.playqd.persistence.MetadataReaderDao;
 import io.playqd.persistence.WatchFolderFileEventLogDao;
+import io.playqd.service.mediasource.MusicDirectoryManager;
 import io.playqd.service.metadata.AlbumArtworkService;
-import io.playqd.service.metadata.ImageSizeRequestParam;
 import io.playqd.service.playlist.PlaylistService;
 import io.playqd.util.FileUtils;
 import io.playqd.util.TimeUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,12 +28,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.List;
-import java.util.Set;
+import java.util.Base64;
 import java.util.stream.Collectors;
 
 @Validated
@@ -44,17 +45,20 @@ class MetadataController {
   private final PlaylistService playlistService;
   private final AlbumArtworkService artworkService;
   private final MetadataReaderDao metadataReaderDao;
+  private final MusicDirectoryManager musicDirectoryManager;
   private final WatchFolderFileEventLogDao watchFolderFileEventLogDao;
 
   MetadataController(AudioFileDao audioFileDao,
                      PlaylistService playlistService,
                      AlbumArtworkService artworkService,
                      MetadataReaderDao metadataReaderDao,
+                     MusicDirectoryManager musicDirectoryManager,
                      WatchFolderFileEventLogDao watchFolderFileEventLogDao) {
     this.audioFileDao = audioFileDao;
-    this.playlistService = playlistService;
     this.artworkService = artworkService;
+    this.playlistService = playlistService;
     this.metadataReaderDao = metadataReaderDao;
+    this.musicDirectoryManager = musicDirectoryManager;
     this.watchFolderFileEventLogDao = watchFolderFileEventLogDao;
   }
 
@@ -99,11 +103,12 @@ class MetadataController {
                      @RequestParam(name = "albumId", required = false) String albumId,
                      @RequestParam(name = "genreId", required = false) String genreId,
                      @RequestParam(name = "playlistId", required = false) String playlistId,
+                     @RequestParam(name = "sourceDirId", required = false, defaultValue = "0") long sourceDirId,
                      @RequestParam(name = "title", required = false) String title,
                      @RequestParam(name = "played", required = false) Boolean played,
                      @RequestParam(name = "lastRecentlyAdded", required = false) boolean lastRecentlyAdded,
                      @RequestParam(name = "recentlyAddedSinceDuration", required = false) String recentlyAddedSinceDuration,
-                     @RequestParam(name = "locations", required = false) List<String> locations) {
+                     @RequestParam(name = "location", required = false, defaultValue = "") String location) {
     if (StringUtils.hasLength(artistId)) {
       return audioFileDao.getAudioFilesByArtistId(artistId, page).map(this::mapToTrack);
     }
@@ -129,8 +134,13 @@ class MetadataController {
       return audioFileDao.getAudioFilesByPlayed(played, page).map(this::mapToTrack);
     }
 
-    if (!CollectionUtils.isEmpty(locations)) {
-      return audioFileDao.getAudioFilesByLocationIn(locations, page).map(this::mapToTrack);
+    if (sourceDirId > 0) {
+      var locationBase64Encoded = Base64.getEncoder().encodeToString(location.getBytes(StandardCharsets.UTF_8));
+      var locations = musicDirectoryManager.tree(sourceDirId, locationBase64Encoded, page).stream()
+          .filter(directoryItem -> ItemType.audioFile == directoryItem.itemType())
+          .map(DirectoryItem::path)
+          .toList();
+      return audioFileDao.getAudioFilesBySourceDirIdAndLocationsIn(sourceDirId, locations, page).map(this::mapToTrack);
     }
 
     if (lastRecentlyAdded) {
@@ -182,20 +192,11 @@ class MetadataController {
 
     var artist = new Track.Artist(audioFile.artistId(), audioFile.artistName());
 
-    var artwork = artworkService.get(audioFile.albumId())
-        .map(art -> new Track.Artwork(
-            art.albumId(),
-            art.metadata().mimeType(),
-            art.metadata().size(),
-            art.resources().getResizedOrOriginal(ImageSizeRequestParam.sm).uri()))
-        .orElse(null);
-
     var album = new Track.Album(
         audioFile.albumId(),
         audioFile.albumName(),
         audioFile.genreId(),
-        audioFile.genre(),
-        artwork);
+        audioFile.genre());
 
     var length = new Track.Length(audioFile.trackLength(),
         audioFile.preciseTrackLength(),

@@ -1,6 +1,7 @@
 package io.playqd.config.cache;
 
 import io.playqd.service.metadata.Artwork;
+import io.playqd.service.metadata.ArtworkKey;
 import io.playqd.service.metadata.MetadataFile;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
 import org.ehcache.config.builders.ExpiryPolicyBuilder;
@@ -22,7 +23,7 @@ class CacheContextConfiguration {
   JCacheManagerCustomizer jCacheManagerCustomizer() {
     return cacheManager -> {
       cacheManager.createCache(CacheNames.METADATA_FILES, metadataFileCacheConfiguration());
-      cacheManager.createCache(CacheNames.ALBUM_ART_BY_ALBUM_ID, albumArtCacheConfiguration());
+      cacheManager.createCache(CacheNames.ALBUM_ART_BY_ARTOWRK_KEY, albumArtCacheConfiguration());
     };
   }
 
@@ -38,9 +39,9 @@ class CacheContextConfiguration {
     return Eh107Configuration.fromEhcacheCacheConfiguration(albumArtCacheConfiguration);
   }
 
-  private javax.cache.configuration.Configuration<String, Artwork> albumArtCacheConfiguration() {
+  private javax.cache.configuration.Configuration<ArtworkKey, Artwork> albumArtCacheConfiguration() {
     var albumArtCacheConfiguration = CacheConfigurationBuilder.newCacheConfigurationBuilder(
-            String.class,
+            ArtworkKey.class,
             Artwork.class,
             ResourcePoolsBuilder.newResourcePoolsBuilder()
                 .offheap(100, MemoryUnit.MB)

@@ -8,7 +8,6 @@ import org.springframework.data.domain.Pageable;
 
 import java.nio.file.Path;
 import java.time.LocalDate;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -27,6 +26,8 @@ public interface AudioFileDao {
 
   AudioFile getAudioFile(long id);
 
+  AudioFile getAudioFileByTrackId(String trackId);
+
   AudioFile getFirstAudioFileByAlbumId(String albumId);
 
   Page<AudioFile> getAudioFiles(Pageable pageable);
@@ -44,6 +45,8 @@ public interface AudioFileDao {
   Page<AudioFile> getAudioFilesAddedToWatchFolderAfterDate(LocalDate afterDate, Pageable pageable);
 
   Page<AudioFile> getAudioFilesByLocationIn(List<String> locations, Pageable pageable);
+
+  Page<AudioFile> getAudioFilesBySourceDirIdAndLocationsIn(long sourceDirId, List<String> locations, Pageable pageable);
 
   Page<Artist> getGenreArtists(String genreId, Pageable pageable);
 

@@ -75,6 +75,11 @@ public class JpaAudioFileDao implements AudioFileDao {
   }
 
   @Override
+  public AudioFile getAudioFileByTrackId(String trackId) {
+    return audioFileRepository.findByTrackId(trackId);
+  }
+
+  @Override
   @Transactional(readOnly = true)
   public Page<Artist> getGenreArtists(String genreId, Pageable pageable) {
     return audioFileRepository.findArtistsByGenreId(genreId, pageable)
@@ -144,6 +149,14 @@ public class JpaAudioFileDao implements AudioFileDao {
   @Override
   public Page<AudioFile> getAudioFilesAddedToWatchFolderAfterDate(LocalDate afterDate, Pageable pageable) {
     return audioFileRepository.findByFileAddedToWatchFolderDateAfter(afterDate, pageable).map(entity -> entity);
+  }
+
+  @Override
+  public Page<AudioFile> getAudioFilesBySourceDirIdAndLocationsIn(long sourceDirId,
+                                                                  List<String> locations,
+                                                                  Pageable pageable) {
+    var result = audioFileRepository.findAllBySourceDirIdAndLocationIn(sourceDirId, locations, pageable);
+    return sortByLocationsOrder(locations, result).map(entity -> entity);
   }
 
   @Override

@@ -2,14 +2,14 @@ package io.playqd.service.mediasource;
 
 import io.playqd.commons.data.MusicDirectory;
 import io.playqd.persistence.MusicDirectoryDao;
-import io.playqd.service.AudioFilePathResolver;
+import io.playqd.service.MusicDirectoryPathResolver;
 import org.springframework.stereotype.Component;
 
 import java.nio.file.Path;
 import java.util.Optional;
 
 @Component
-class MusicDirectoryFilePathResolver implements AudioFilePathResolver {
+class MusicDirectoryFilePathResolver implements MusicDirectoryPathResolver {
 
   private final MusicDirectoryDao musicDirectoryDao;
 
@@ -37,7 +37,20 @@ class MusicDirectoryFilePathResolver implements AudioFilePathResolver {
   }
 
   @Override
+  public Path unRelativize(Path path) {
+    return musicDirectoryDao.getAll().stream()
+        .map(MusicDirectory::path)
+        .map(musicDirPath -> unRelativize(musicDirPath, path))
+        .findFirst()
+        .orElse(null);
+  }
+
+  @Override
   public Path unRelativize(long musicDirId, Path other) {
-    return musicDirectoryDao.get(musicDirId).path().resolve(other);
+    return unRelativize(musicDirectoryDao.get(musicDirId).path(), other);
+  }
+
+  private static Path unRelativize(Path path, Path other) {
+    return path.resolve(other);
   }
 }

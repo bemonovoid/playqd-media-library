@@ -7,7 +7,7 @@ import io.playqd.service.metadata.AudioFileAttributes;
 import java.nio.file.Path;
 import java.util.Optional;
 
-public interface AudioFilePathResolver {
+public interface MusicDirectoryPathResolver {
 
   Optional<MusicDirectory> resolveSourceDir(Path path);
 
@@ -26,6 +26,8 @@ public interface AudioFilePathResolver {
   default Path unRelativize(AudioFile audioFile) {
     return unRelativize(audioFile.sourceDirId(), audioFile.path());
   }
+
+  Path unRelativize(Path other);
 
   Path unRelativize(long musicDirId, Path other);
 }

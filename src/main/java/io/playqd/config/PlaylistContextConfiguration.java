@@ -3,7 +3,7 @@ package io.playqd.config;
 import io.playqd.config.lifecycle.ApplicationRunnerOrder;
 import io.playqd.config.lifecycle.PlaylistsDirectoryInitializer;
 import io.playqd.config.properties.PlayqdProperties;
-import io.playqd.service.AudioFilePathResolver;
+import io.playqd.service.MusicDirectoryPathResolver;
 import io.playqd.service.playlist.PlaylistFilesFetcher;
 import io.playqd.service.playlist.PlaylistService;
 import io.playqd.service.playlist.PlaylistServiceImpl;
@@ -32,9 +32,9 @@ public class PlaylistContextConfiguration {
   }
 
   @Bean
-  PlaylistService playlistService(AudioFilePathResolver audioFilePathResolver,
+  PlaylistService playlistService(MusicDirectoryPathResolver musicDirectoryPathResolver,
                                   Set<PlaylistFilesFetcher> playlistFilesFetchers) {
-    return new PlaylistServiceImpl(audioFilePathResolver, playlistFilesFetchers);
+    return new PlaylistServiceImpl(musicDirectoryPathResolver, playlistFilesFetchers);
   }
 
 }

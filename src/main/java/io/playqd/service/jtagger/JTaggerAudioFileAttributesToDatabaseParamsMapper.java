@@ -2,7 +2,7 @@ package io.playqd.service.jtagger;
 
 import io.playqd.exception.AudioMetadataReadException;
 import io.playqd.persistence.jpa.entity.AudioFileJpaEntity;
-import io.playqd.service.AudioFilePathResolver;
+import io.playqd.service.MusicDirectoryPathResolver;
 import io.playqd.service.MetadataFileReader;
 import io.playqd.service.metadata.CommonFileAttributesToSqlParamsMapper;
 import io.playqd.service.metadata.MetadataFile;
@@ -39,8 +39,8 @@ public class JTaggerAudioFileAttributesToDatabaseParamsMapper extends CommonFile
   private final MetadataFileReader metadataFileReader;
 
   public JTaggerAudioFileAttributesToDatabaseParamsMapper(MetadataFileReader metadataFileReader,
-                                                          AudioFilePathResolver audioFilePathResolver) {
-    super(audioFilePathResolver);
+                                                          MusicDirectoryPathResolver musicDirectoryPathResolver) {
+    super(musicDirectoryPathResolver);
     this.metadataFileReader = metadataFileReader;
   }
 

@@ -1,9 +1,10 @@
 package io.playqd.service.metadata;
 
+import io.playqd.commons.data.ArtworkSize;
 import io.playqd.config.cache.CacheNames;
 import io.playqd.model.AudioFile;
 import io.playqd.persistence.AudioFileDao;
-import io.playqd.service.AudioFilePathResolver;
+import io.playqd.service.MusicDirectoryPathResolver;
 import io.playqd.util.FileUtils;
 import io.playqd.util.ImageUtils;
 import io.playqd.util.SupportedImageFiles;
@@ -15,7 +16,6 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -23,52 +23,29 @@ import java.util.stream.Stream;
 @Service
 class AlbumArtworkServiceImpl implements AlbumArtworkService {
 
-  private static final int IMAGE_WIDTH_SMALL = 250;
-  private static final int IMAGE_HEIGHT_SMALL = 250;
-
   private final AudioFileDao audioFileDao;
-  private final AudioFilePathResolver audioFilePathResolver;
+  private final MusicDirectoryPathResolver musicDirectoryPathResolver;
 
-  public AlbumArtworkServiceImpl(AudioFileDao audioFileDao, AudioFilePathResolver audioFilePathResolver) {
+  public AlbumArtworkServiceImpl(AudioFileDao audioFileDao, MusicDirectoryPathResolver musicDirectoryPathResolver) {
     this.audioFileDao = audioFileDao;
-    this.audioFilePathResolver = audioFilePathResolver;
+    this.musicDirectoryPathResolver = musicDirectoryPathResolver;
   }
 
   @Override
-  @Cacheable(cacheNames = CacheNames.ALBUM_ART_BY_ALBUM_ID, unless = "#result == null")
-  public Optional<Artwork> get(String albumId) {
-    return get(audioFileDao.getFirstAudioFileByAlbumId(albumId));
+  @Cacheable(cacheNames = CacheNames.ALBUM_ART_BY_ARTOWRK_KEY, unless = "#result == null")
+  public Optional<Artwork> getArtwork(ArtworkKey artworkKey) {
+    var audioFile = audioFileDao.getFirstAudioFileByAlbumId(artworkKey.getAlbumId());
+    return getEmbedded(audioFile, artworkKey.getArtworkSize())
+        .or(() -> getFromAlbumFolder(audioFile, artworkKey.getArtworkSize()));
   }
 
-  @Override
-  @Cacheable(cacheNames = CacheNames.ALBUM_ART_BY_ALBUM_ID, key = "#albumId", unless = "#result == null")
-  public Optional<Artwork> get(String albumId, String albumFolderImageFileName) {
-    var audioFile = audioFileDao.getFirstAudioFileByAlbumId(albumId);
-    var albumFolder = audioFile.path().getParent();
-    try (Stream<Path> albumFolderFilesStream = Files.list(albumFolder)) {
-      return albumFolderFilesStream
-          .filter(path -> path.endsWith(albumFolderImageFileName))
-          .findFirst()
-          .map(path -> createAlbumArtFromAlbumFolderPath(path, audioFile));
-    } catch (IOException e) {
-      log.error("Failed to read album folder image file: {}", albumFolderImageFileName, e);
-      return Optional.empty();
-    }
-  }
-
-  @Override
-  @Cacheable(cacheNames = CacheNames.ALBUM_ART_BY_ALBUM_ID, key = "#audioFile.albumId", unless = "#result == null")
-  public Optional<Artwork> get(AudioFile audioFile) {
-    return getEmbedded(audioFile).or(() -> getFromAlbumFolder(audioFile));
-  }
-
-  private Optional<Artwork> getEmbedded(AudioFile audioFile) {
+  private Optional<Artwork> getEmbedded(AudioFile audioFile, ArtworkSize artworkSize) {
     try {
 
       log.info("Getting album art from audio file metadata for '{} - {}'",
           audioFile.artistName(), audioFile.albumName());
 
-      var audioFilePath = audioFilePathResolver.unRelativize(audioFile);
+      var audioFilePath = musicDirectoryPathResolver.unRelativize(audioFile);
 
       var jTaggerAudioFile = AudioFileIO.read(audioFilePath.toFile());
 
@@ -83,23 +60,20 @@ class AlbumArtworkServiceImpl implements AlbumArtworkService {
         return Optional.empty();
       }
 
-      var imageByteArray = artwork.getBinaryData();
-      var mimeType = FileUtils.detectMimeType(imageByteArray);
-      var metadata = new ImageMetadata(
-          imageByteArray.length, mimeType, new Dimensions(artwork.getWidth(), artwork.getHeight()));
+      var binaryData = ImageUtils.resize(artwork.getBinaryData(), artworkSize);
+      var mimeType = FileUtils.detectMimeType(binaryData);
 
       log.info("Album art was found in audio file metadata.");
 
-      return Optional.of(new Artwork(audioFile.albumId(),
-          createAlbumArtImageResources(audioFile.albumId(), null, imageByteArray), metadata));
+      return Optional.of(new Artwork(binaryData.length, mimeType, binaryData));
     } catch (Exception e) {
       log.error("Failed to read audio file metadata at: {}", audioFile.path(), e);
       return Optional.empty();
     }
   }
 
-  private Optional<Artwork> getFromAlbumFolder(AudioFile audioFile) {
-    var location = audioFilePathResolver.unRelativize(audioFile);
+  private Optional<Artwork> getFromAlbumFolder(AudioFile audioFile, ArtworkSize artworkSize) {
+    var location = musicDirectoryPathResolver.unRelativize(audioFile);
     var albumFolder = location.getParent();
 
     log.info("Getting album art from album folder for '{} - {}' in {}",
@@ -110,7 +84,7 @@ class AlbumArtworkServiceImpl implements AlbumArtworkService {
           .filter(Files::isRegularFile)
           .filter(path -> SupportedImageFiles.isAlbumArtFile(path, audioFile))
           .findFirst()
-          .map(path -> createAlbumArtFromAlbumFolderPath(path, audioFile));
+          .map(path -> createAlbumArtFromAlbumFolderPath(path, artworkSize));
       mayBeAlbumArt.ifPresentOrElse(
           artwork -> log.info("Found album art image in album folder"),
           () -> log.warn("Album art wasn't found"));
@@ -121,29 +95,14 @@ class AlbumArtworkServiceImpl implements AlbumArtworkService {
     }
   }
 
-  private Artwork createAlbumArtFromAlbumFolderPath(Path path, AudioFile audioFile) {
+  private Artwork createAlbumArtFromAlbumFolderPath(Path path, ArtworkSize artworkSize) {
     var mimeType = FileUtils.detectMimeType(path.toString());
-    var metadata = new ImageMetadata(FileUtils.getFileSize(path), mimeType, Dimensions.unknown());
-    var imageByteArray = new byte[0];
     try {
-      imageByteArray = Files.readAllBytes(path);
+      var binaryData = ImageUtils.resize(Files.readAllBytes(path), artworkSize);
+      return new Artwork(binaryData.length, mimeType, binaryData);
     } catch (IOException e) {
       log.error("Failed to read album folder image file content.", e);
+      return new Artwork(0, null, new byte[]{});
     }
-    return new Artwork(audioFile.albumId(), createAlbumArtImageResources(
-        audioFile.albumId(), path.getFileName().toString(), imageByteArray), metadata);
   }
-
-  private ImageResources createAlbumArtImageResources(String albumId,
-                                                      String albumFolderImageFilename,
-                                                      byte[] originalData) {
-    return new ImageResources(
-        new ImageResource(ImageUtils.createAlbumArtResourceUri(
-            "localhost", albumId, albumFolderImageFilename), originalData),
-        Map.of(ImageSizeRequestParam.sm,
-            new ImageResource(ImageUtils.createAlbumArtResourceUri(
-                "localhost", albumId, albumFolderImageFilename, ImageSizeRequestParam.sm),
-                ImageUtils.resize(originalData, IMAGE_WIDTH_SMALL, IMAGE_HEIGHT_SMALL))));
-  }
-
 }

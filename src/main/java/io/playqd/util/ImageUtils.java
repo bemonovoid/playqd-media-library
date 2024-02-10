@@ -1,9 +1,8 @@
 package io.playqd.util;
 
-import io.playqd.api.controller.RestApiResources;
-import io.playqd.service.metadata.ImageSizeRequestParam;
+import io.playqd.commons.data.ArtworkSize;
+import io.playqd.commons.utils.Tuple;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.util.StringUtils;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -11,13 +10,28 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.Map;
 
 @Slf4j
 public abstract class ImageUtils {
 
-  public static byte[] resize(byte[] data, int newWidth, int newHeight) {
+  private static final Map<ArtworkSize, Tuple<Integer, Integer>> IMAGE_DIMENSIONS =
+      Map.of(ArtworkSize.sm, Tuple.from(250, 250));
+
+  public static byte[] resize(byte[] data, ArtworkSize artworkSize) {
     try {
+      if (ArtworkSize.original == artworkSize) {
+        return data;
+      }
+      var newDimensions = IMAGE_DIMENSIONS.get(artworkSize);
+
+      if (newDimensions == null) {
+        return data;
+      }
+
+      var newWidth = newDimensions.left();
+      var newHeight = newDimensions.right();
+
       var image = ImageIO.read(new ByteArrayInputStream(data));
 
       if (image.getWidth() <= newWidth && image.getHeight() <= newHeight) {
@@ -46,56 +60,4 @@ public abstract class ImageUtils {
       return new byte[]{};
     }
   }
-
-  public static String createAlbumArtResourceUri(String hostname, String albumId) {
-    return createAlbumArtResourceUri(hostname, albumId, null, null);
-  }
-
-  public static String createAlbumArtResourceUri(String hostname, String albumId, String albumFolderImageFilename) {
-    return createAlbumArtResourceUri(hostname, albumId, albumFolderImageFilename, null);
-  }
-
-  public static String createAlbumArtResourceUri(String hostname,
-                                                 String albumId,
-                                                 ImageSizeRequestParam imageSizeName) {
-    return createAlbumArtResourceUri(hostname, albumId, null, imageSizeName);
-  }
-
-  public static String createAlbumArtResourceUri(String hostname,
-                                                 String albumId,
-                                                 String albumFolderImageFilename,
-                                                 ImageSizeRequestParam imageSizeName) {
-    var imageResourcePath = String.format("http://%s%s/%s", hostname, RestApiResources.ALBUM_ART_IMAGE, albumId);
-    if (StringUtils.hasText(albumFolderImageFilename) || imageSizeName != null) {
-      imageResourcePath = imageResourcePath + "?";
-    }
-    var params = new ArrayList<String>(2);
-    if (StringUtils.hasText(albumFolderImageFilename)) {
-      params.add("name=" + albumFolderImageFilename);
-    }
-    if (imageSizeName != null) {
-      params.add("size=" + imageSizeName.name());
-    }
-    if (!params.isEmpty()) {
-      imageResourcePath = imageResourcePath + String.join("&", params);
-    }
-    return imageResourcePath;
-  }
-
-  public static String createBrowsableObjectImageResourceUri(String hostname, String objectId) {
-    return String.format("http://%s%s/%s", hostname, RestApiResources.BROWSABLE_OBJECT_IMAGE, objectId);
-  }
-
-  public static String createImageResourceUri(String hostname, String imageId) {
-    return createImageResourceUri(hostname, imageId, null);
-  }
-
-  public static String createImageResourceUri(String hostname, String imageId, ImageSizeRequestParam imageSizeName) {
-    if (imageSizeName != null) {
-      return String.format("http://%s%s/%s?size=%s",
-          hostname, RestApiResources.IMAGE, imageId, imageSizeName.name());
-    }
-    return String.format("http://%s%s/%s", hostname, RestApiResources.IMAGE, imageId);
-  }
-
 }

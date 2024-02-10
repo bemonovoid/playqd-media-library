@@ -6,7 +6,7 @@ import io.playqd.config.properties.PlayqdProperties;
 import io.playqd.persistence.AudioFileDao;
 import io.playqd.persistence.MusicDirectoryDao;
 import io.playqd.persistence.simple.MusicDirectoryDaoImpl;
-import io.playqd.service.AudioFilePathResolver;
+import io.playqd.service.MusicDirectoryPathResolver;
 import io.playqd.service.mediasource.MusicDirectoryManager;
 import io.playqd.service.mediasource.MusicDirectoryManagerImpl;
 import io.playqd.service.mediasource.MusicDirectoryScanner;
@@ -37,10 +37,10 @@ public class MusicDirectoryContextConfiguration {
   MusicDirectoryScanner mediaSourceScanner(AudioFileDao audioFileDao,
                                            MusicDirectoryDao musicDirectoryDao,
                                            ApplicationEventPublisher eventPublisher,
-                                           AudioFilePathResolver audioFilePathResolver,
+                                           MusicDirectoryPathResolver musicDirectoryPathResolver,
                                            FileAttributesToSqlParamsMapper fileAttributesToSqlParamsMapper) {
     return new MusicDirectoryScannerImpl(
-        audioFileDao, musicDirectoryDao, eventPublisher, audioFilePathResolver, fileAttributesToSqlParamsMapper);
+        audioFileDao, musicDirectoryDao, eventPublisher, musicDirectoryPathResolver, fileAttributesToSqlParamsMapper);
   }
 
   @Bean

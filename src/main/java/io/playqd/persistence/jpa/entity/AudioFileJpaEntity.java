@@ -4,7 +4,6 @@ import io.playqd.model.AudioFile;
 import jakarta.persistence.Basic;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
@@ -22,7 +21,6 @@ import java.util.Set;
 @Setter
 @Accessors(fluent = true)
 @EqualsAndHashCode(callSuper = true)
-@EntityListeners(AudioFileEntityEventListener.class)
 @Entity
 @Table(name = AudioFileJpaEntity.TABLE_NAME, indexes = {
     @Index(name = "name_idx", columnList = AudioFileJpaEntity.COL_NAME),

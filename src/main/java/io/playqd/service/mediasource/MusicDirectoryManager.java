@@ -18,6 +18,10 @@ public interface MusicDirectoryManager {
 
   Page<DirectoryItem> tree(Pageable page);
 
+  default Page<DirectoryItem> tree(long id) {
+    return tree(id, "", Pageable.unpaged());
+  }
+
   Page<DirectoryItem> tree(long id, String pathBase64Encoded, Pageable page);
 
   MusicDirectoryContentInfo info(long sourceId);
