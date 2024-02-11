@@ -11,6 +11,7 @@ import io.playqd.persistence.MusicDirectoryDao;
 import io.playqd.util.SupportedAudioFiles;
 import io.playqd.util.SupportedImageFiles;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FilenameUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -64,8 +65,9 @@ public class MusicDirectoryManagerImpl implements MusicDirectoryManager {
     var musicDirectory = get(id);
     var parentPath = musicDirectory.path();
     if (StringUtils.hasLength(pathBase64Encoded)) {
-      var pathDecoded = new String(Base64.getDecoder().decode(pathBase64Encoded));
-      parentPath = parentPath.resolve(pathDecoded);
+      var pathSystemAdjusted = new String(Base64.getDecoder().decode(pathBase64Encoded));
+      pathSystemAdjusted = FilenameUtils.separatorsToSystem(parentPath.toString());
+      parentPath = parentPath.resolve(pathSystemAdjusted);
     }
     try (var pathItems = Files.list(parentPath)) {
       var result = pathItems
