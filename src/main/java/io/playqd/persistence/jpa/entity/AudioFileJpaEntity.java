@@ -97,7 +97,7 @@ public class AudioFileJpaEntity extends PersistableAuditableEntity implements Au
   private String artistId;
   @Column(name = COL_ALBUM_ID, nullable = false)
   private String albumId;
-  @Column(name = COL_TRACK_ID, nullable = false)
+  @Column(name = COL_TRACK_ID, nullable = false, unique = true)
   private String trackId;
   @Column(name = COL_GENRE_ID, nullable = false)
   private String genreId;

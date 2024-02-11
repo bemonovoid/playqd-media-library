@@ -92,8 +92,9 @@ public class JTaggerAudioFileAttributesToDatabaseParamsMapper extends CommonFile
 
       // Track
       var trackName = AudioFileTagReader.readFromTag(jTaggerAudioFile, FieldKey.TITLE, () -> fileName);
+      // Using file.getName() instead of trackName because tracks may have equal names
       var trackId = UUIDS.computeIfAbsent(
-          artistName + albumName + trackName, UUIDV3Ids::create);
+          artistName + albumName + file.getName(), UUIDV3Ids::create);
       params.put(AudioFileJpaEntity.COL_TRACK_NAME, trackName);
       params.put(AudioFileJpaEntity.COL_TRACK_ID, trackId);
       params.put(AudioFileJpaEntity.COL_TRACK_NUMBER,
