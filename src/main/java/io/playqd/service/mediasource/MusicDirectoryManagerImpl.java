@@ -65,8 +65,8 @@ public class MusicDirectoryManagerImpl implements MusicDirectoryManager {
     var musicDirectory = get(id);
     var parentPath = musicDirectory.path();
     if (StringUtils.hasLength(pathBase64Encoded)) {
-      var pathSystemAdjusted = new String(Base64.getDecoder().decode(pathBase64Encoded));
-      pathSystemAdjusted = FilenameUtils.separatorsToSystem(parentPath.toString());
+      var pathBase64Decoded = new String(Base64.getDecoder().decode(pathBase64Encoded));
+      var pathSystemAdjusted = FilenameUtils.separatorsToSystem(pathBase64Decoded);
       parentPath = parentPath.resolve(pathSystemAdjusted);
     }
     try (var pathItems = Files.list(parentPath)) {
