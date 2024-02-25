@@ -1,11 +1,11 @@
 eureka:
-  instance:
-    hostname: "host.docker.internal"
   client:
     enabled: true
+    serviceUrl:
+      defaultZone: "http://localhost:${eureka.client.eureka-server-port}/eureka/"
 spring:
   datasource:
-    url: "jdbc:mysql://host.docker.internal:8306/${spring.application.name}"
+    url: "jdbc:mysql://host.docker.internal:8306/${spring.application.name}-docker"
 playqd:
   sources:
     - name: "All Music"

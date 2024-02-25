@@ -135,8 +135,7 @@ class MetadataController {
     }
 
     if (sourceDirId > 0) {
-      var locationBase64Encoded = Base64.getEncoder().encodeToString(location.getBytes(StandardCharsets.UTF_8));
-      var locations = musicDirectoryManager.tree(sourceDirId, locationBase64Encoded, page).stream()
+      var locations = musicDirectoryManager.tree(sourceDirId, location, page).stream()
           .filter(directoryItem -> ItemType.audioFile == directoryItem.itemType())
           .map(DirectoryItem::path)
           .toList();

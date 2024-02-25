@@ -9,6 +9,7 @@ import io.playqd.util.TimeUtils;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -59,5 +60,12 @@ public abstract class CommonFileAttributesToSqlParamsMapper implements FileAttri
       throw new AudioMetadataReadException(e);
     }
 
+  }
+
+  public static void main(String[] args) {
+    Path p = Path.of("Apparat\\Apparat - Tttrial and Eror\\06. ABS.flac");
+    Path p2 = Path.of("Apparat/Apparat - Tttrial and Eror/06. ABS.flac");
+    System.out.println(p);
+    System.out.println(p2);
   }
 }
