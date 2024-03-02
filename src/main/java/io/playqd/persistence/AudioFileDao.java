@@ -16,6 +16,8 @@ public interface AudioFileDao {
 
   boolean isEmpty();
 
+  long count();
+
   long countPlayed();
 
   long countNotPlayed();

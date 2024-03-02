@@ -34,6 +34,11 @@ public class PlaylistServiceImpl implements PlaylistService {
   }
 
   @Override
+  public long count() {
+    return playlistFilesFetchers.stream().mapToLong(PlaylistFilesFetcher::count).sum();
+  }
+
+  @Override
   public List<Playlist> getPlaylists() {
     return playlistFilesFetchers.stream()
         .flatMap(playlistFilesFetcher -> playlistFilesFetcher.fetch().stream())

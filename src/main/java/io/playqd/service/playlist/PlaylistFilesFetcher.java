@@ -6,5 +6,7 @@ import java.util.List;
 
 public interface PlaylistFilesFetcher {
 
+  long count();
+
   List<Playlist> fetch();
 }

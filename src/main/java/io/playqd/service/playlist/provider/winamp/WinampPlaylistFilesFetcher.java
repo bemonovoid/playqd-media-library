@@ -26,7 +26,25 @@ public class WinampPlaylistFilesFetcher implements PlaylistFilesFetcher {
   }
 
   @Override
+  public long count() {
+    try {
+      return getWinampPlaylistsElements().size();
+    } catch (IOException e) {
+      log.error("", e);
+      return 0;
+    }
+  }
+
+  @Override
   public List<Playlist> fetch() {
+    try {
+      return getWinampPlaylistsElements().stream().map(this::toPlaylist).toList();
+    } catch (IOException e) {
+      throw new PlaylistServiceException(e);
+    }
+  }
+
+  private List<PlaylistElement> getWinampPlaylistsElements() throws IOException {
     var winampPlaylistsPath = Paths.get(winampPlaylistProps.getDir());
     var winampPlaylistsXmlFile = winampPlaylistsPath.resolve(winampPlaylistProps.getPlaylistsXmlFileName()).toFile();
 
@@ -39,23 +57,15 @@ public class WinampPlaylistFilesFetcher implements PlaylistFilesFetcher {
           String.format("'%s' must be xml file but was a directory.", winampPlaylistsXmlFile.getPath()));
     }
 
-    try {
+    var xmlMapper = new XmlMapper();
 
-      var xmlMapper = new XmlMapper();
+    var winampPlaylists = xmlMapper.readValue(winampPlaylistsXmlFile, PlaylistsXmlModel.class);
 
-      var winampPlaylists = xmlMapper.readValue(winampPlaylistsXmlFile, PlaylistsXmlModel.class);
-
-      if (winampPlaylists.getPlaylists() == 0) {
-        return Collections.emptyList();
-      }
-
-      return winampPlaylists.getPlaylistElements().stream()
-          .map(this::toPlaylist)
-          .toList();
-
-    } catch (IOException e) {
-      throw new PlaylistServiceException(e);
+    if (winampPlaylists.getPlaylists() == 0) {
+      return Collections.emptyList();
     }
+
+    return winampPlaylists.getPlaylistElements();
   }
 
   private Playlist toPlaylist(PlaylistElement playlistElement) {

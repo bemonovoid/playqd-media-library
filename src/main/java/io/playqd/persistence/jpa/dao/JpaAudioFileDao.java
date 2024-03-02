@@ -50,6 +50,11 @@ public class JpaAudioFileDao implements AudioFileDao {
   }
 
   @Override
+  public long count() {
+    return audioFileRepository.count();
+  }
+
+  @Override
   public long countPlayed() {
     return audioFileRepository.countByFileLastPlaybackDateIsNotNull();
   }

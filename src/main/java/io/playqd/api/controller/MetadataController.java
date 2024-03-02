@@ -14,7 +14,6 @@ import io.playqd.persistence.AudioFileDao;
 import io.playqd.persistence.MetadataReaderDao;
 import io.playqd.persistence.WatchFolderFileEventLogDao;
 import io.playqd.service.mediasource.MusicDirectoryManager;
-import io.playqd.service.metadata.AlbumArtworkService;
 import io.playqd.service.playlist.PlaylistService;
 import io.playqd.util.FileUtils;
 import io.playqd.util.TimeUtils;
@@ -28,12 +27,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Base64;
 import java.util.stream.Collectors;
 
 @Validated
@@ -43,35 +40,21 @@ class MetadataController {
 
   private final AudioFileDao audioFileDao;
   private final PlaylistService playlistService;
-  private final AlbumArtworkService artworkService;
   private final MetadataReaderDao metadataReaderDao;
   private final MusicDirectoryManager musicDirectoryManager;
   private final WatchFolderFileEventLogDao watchFolderFileEventLogDao;
 
   MetadataController(AudioFileDao audioFileDao,
                      PlaylistService playlistService,
-                     AlbumArtworkService artworkService,
                      MetadataReaderDao metadataReaderDao,
                      MusicDirectoryManager musicDirectoryManager,
                      WatchFolderFileEventLogDao watchFolderFileEventLogDao) {
     this.audioFileDao = audioFileDao;
-    this.artworkService = artworkService;
     this.playlistService = playlistService;
     this.metadataReaderDao = metadataReaderDao;
     this.musicDirectoryManager = musicDirectoryManager;
     this.watchFolderFileEventLogDao = watchFolderFileEventLogDao;
   }
-
-//  @GetMapping("/sources/{sourceId}/info")
-//  MetadataContentInfo info(@PathVariable long sourceId) {
-//    return mediaMetadataService.getInfo(sourceId);
-//  }
-//
-//  @DeleteMapping("/sources/{sourceId}")
-//  @ResponseStatus(HttpStatus.NO_CONTENT)
-//  String clear(@PathVariable long sourceId) {
-//    return String.format("Successfully removed %s metadata items from store.", mediaMetadataService.clear(sourceId));
-//  }
 
   @GetMapping("/artists")
   Page<Artist> artists(@PageableDefault(size = 100, sort = "name") Pageable page, ArtistQueryParams params) {
