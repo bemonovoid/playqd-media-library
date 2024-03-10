@@ -1,9 +1,10 @@
 package io.playqd.api.controller;
 
 import io.playqd.commons.data.ArtworkSize;
-import io.playqd.service.MusicDirectoryPathResolver;
+import io.playqd.commons.data.ItemType;
 import io.playqd.service.metadata.AlbumArtworkService;
 import io.playqd.service.metadata.ArtworkKey;
+import io.playqd.service.watchfolder.WatchFolderBrowser;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
@@ -15,8 +16,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -25,19 +24,29 @@ import java.util.concurrent.TimeUnit;
 class ImageStreamController {
 
   private final AlbumArtworkService albumArtworkService;
-  private final MusicDirectoryPathResolver musicDirectoryPathResolver;
+  private final WatchFolderBrowser watchFolderBrowser;
 
   ImageStreamController(AlbumArtworkService albumArtworkService,
-                        MusicDirectoryPathResolver musicDirectoryPathResolver) {
+                        WatchFolderBrowser watchFolderBrowser) {
     this.albumArtworkService = albumArtworkService;
-    this.musicDirectoryPathResolver = musicDirectoryPathResolver;
+    this.watchFolderBrowser = watchFolderBrowser;
   }
 
-  @GetMapping(path = "/{locationBase64Encoded}")
-  ResponseEntity<byte[]> getFromLocation(@PathVariable(name = "locationBase64Encoded") String locationBase64Encoded) {
+  @GetMapping(path = "/{imageId}")
+  ResponseEntity<byte[]> getFromLocation(@PathVariable(name = "imageId") String imageId) {
     try {
-      var imageLocationDecoded = new String(Base64.getDecoder().decode(locationBase64Encoded));
-      var imagePath = musicDirectoryPathResolver.unRelativize(Paths.get(imageLocationDecoded));
+      var watchFolderItemOpt = watchFolderBrowser.get(imageId);
+      if (watchFolderItemOpt.isEmpty()) {
+        log.warn("No image with id: '{}' found.", imageId);
+        return ResponseEntity.notFound().build();
+      }
+      var watchFolderItem = watchFolderItemOpt.get();
+      if (ItemType.imageFile != watchFolderItem.itemType()) {
+        log.warn("Resource with id: '{}' isn't an image.", imageId);
+        return ResponseEntity.notFound().build();
+      }
+
+      var imagePath = watchFolderItem.path();
 
       if (!Files.exists(imagePath)) {
         log.warn("Image file: {} wasn't found.", imagePath);

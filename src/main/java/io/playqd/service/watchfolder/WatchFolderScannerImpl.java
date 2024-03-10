@@ -1,12 +1,12 @@
-package io.playqd.service.mediasource;
+package io.playqd.service.watchfolder;
 
-import io.playqd.commons.data.MusicDirectory;
+import io.playqd.commons.data.WatchFolder;
 import io.playqd.exception.MediaSourceScannerException;
 import io.playqd.model.event.AudioFileMetadataAddedEvent;
 import io.playqd.persistence.AudioFileDao;
-import io.playqd.persistence.MusicDirectoryDao;
+import io.playqd.persistence.WatchFolderDao;
 import io.playqd.persistence.jpa.entity.AudioFileJpaEntity;
-import io.playqd.service.MusicDirectoryPathResolver;
+import io.playqd.service.WatchFolderFilePathResolver;
 import io.playqd.service.metadata.AudioFileAttributes;
 import io.playqd.service.metadata.FileAttributesToSqlParamsMapper;
 import io.playqd.service.metadata.ParamsMapperContext;
@@ -38,24 +38,24 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Slf4j
-public class MusicDirectoryScannerImpl implements MusicDirectoryScanner {
+public class WatchFolderScannerImpl implements WatchFolderScanner {
 
   private final AudioFileDao audioFileDao;
-  private final MusicDirectoryDao musicDirectoryDao;
+  private final WatchFolderDao watchFolderDao;
   private final ApplicationEventPublisher eventPublisher;
-  private final MusicDirectoryPathResolver musicDirectoryPathResolver;
+  private final WatchFolderFilePathResolver watchFolderFilePathResolver;
   private final FileAttributesToSqlParamsMapper fileAttributesMapper;
 
-  public MusicDirectoryScannerImpl(AudioFileDao audioFileDao,
-                                   MusicDirectoryDao musicDirectoryDao,
-                                   ApplicationEventPublisher eventPublisher,
-                                   MusicDirectoryPathResolver musicDirectoryPathResolver,
-                                   FileAttributesToSqlParamsMapper fileAttributesMapper) {
+  public WatchFolderScannerImpl(AudioFileDao audioFileDao,
+                                WatchFolderDao watchFolderDao,
+                                ApplicationEventPublisher eventPublisher,
+                                WatchFolderFilePathResolver watchFolderFilePathResolver,
+                                FileAttributesToSqlParamsMapper fileAttributesMapper) {
     this.audioFileDao = audioFileDao;
     this.eventPublisher = eventPublisher;
-    this.musicDirectoryDao = musicDirectoryDao;
+    this.watchFolderDao = watchFolderDao;
     this.fileAttributesMapper = fileAttributesMapper;
-    this.musicDirectoryPathResolver = musicDirectoryPathResolver;
+    this.watchFolderFilePathResolver = watchFolderFilePathResolver;
   }
 
   private static Predicate<Path> ignoredDirs(Set<String> ignoredDirs) {
@@ -108,14 +108,14 @@ public class MusicDirectoryScannerImpl implements MusicDirectoryScanner {
       Stream<AudioFileAttributes> prevScannedAudioFilesStream;
 
       if (subPath != null) {
-        var relativePath = musicDirectoryPathResolver.relativize(subPath);
+        var relativePath = watchFolderFilePathResolver.relativize(subPath);
         prevScannedAudioFilesStream = audioFileDao.streamByLocationStartsWith(relativePath, AudioFileAttributes.class);
       } else {
         prevScannedAudioFilesStream = audioFileDao.streamBySourceDirId(dirId, AudioFileAttributes.class);
       }
 
       var prevScannedAudioFiles = Collections.synchronizedMap(
-          prevScannedAudioFilesStream.collect(Collectors.toMap(musicDirectoryPathResolver::unRelativize, value -> value)));
+          prevScannedAudioFilesStream.collect(Collectors.toMap(watchFolderFilePathResolver::unRelativize, value -> value)));
 
       var newAudioFiles = Collections.synchronizedList(new LinkedList<Map<String, Object>>());
       var modifiedAudioFiles = Collections.synchronizedMap(new LinkedHashMap<Long, Map<String, Object>>());
@@ -202,12 +202,12 @@ public class MusicDirectoryScannerImpl implements MusicDirectoryScanner {
     audioFileDao.updateAll(modifiedItemsInsertParams);
   }
 
-  private MusicDirectory getMusicDirectory(long dirId, Path path) {
+  private WatchFolder getMusicDirectory(long dirId, Path path) {
     if (path != null) {
-      return musicDirectoryPathResolver.resolveSourceDir(path)
+      return watchFolderFilePathResolver.resolveWatchFolder(path)
           .orElseThrow(() -> new MediaSourceScannerException(String.format("Location does not exist: %s", path)));
     } else {
-      return musicDirectoryDao.get(dirId);
+      return watchFolderDao.get(dirId);
     }
   }
 }

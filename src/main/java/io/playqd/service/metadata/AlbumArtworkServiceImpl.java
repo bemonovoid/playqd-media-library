@@ -4,7 +4,7 @@ import io.playqd.commons.data.ArtworkSize;
 import io.playqd.config.cache.CacheNames;
 import io.playqd.model.AudioFile;
 import io.playqd.persistence.AudioFileDao;
-import io.playqd.service.MusicDirectoryPathResolver;
+import io.playqd.service.WatchFolderFilePathResolver;
 import io.playqd.util.FileUtils;
 import io.playqd.util.ImageUtils;
 import io.playqd.util.SupportedImageFiles;
@@ -24,11 +24,11 @@ import java.util.stream.Stream;
 class AlbumArtworkServiceImpl implements AlbumArtworkService {
 
   private final AudioFileDao audioFileDao;
-  private final MusicDirectoryPathResolver musicDirectoryPathResolver;
+  private final WatchFolderFilePathResolver watchFolderFilePathResolver;
 
-  public AlbumArtworkServiceImpl(AudioFileDao audioFileDao, MusicDirectoryPathResolver musicDirectoryPathResolver) {
+  public AlbumArtworkServiceImpl(AudioFileDao audioFileDao, WatchFolderFilePathResolver watchFolderFilePathResolver) {
     this.audioFileDao = audioFileDao;
-    this.musicDirectoryPathResolver = musicDirectoryPathResolver;
+    this.watchFolderFilePathResolver = watchFolderFilePathResolver;
   }
 
   @Override
@@ -45,7 +45,7 @@ class AlbumArtworkServiceImpl implements AlbumArtworkService {
       log.info("Getting album art from audio file metadata for '{} - {}'",
           audioFile.artistName(), audioFile.albumName());
 
-      var audioFilePath = musicDirectoryPathResolver.unRelativize(audioFile);
+      var audioFilePath = watchFolderFilePathResolver.unRelativize(audioFile);
 
       var jTaggerAudioFile = AudioFileIO.read(audioFilePath.toFile());
 
@@ -73,7 +73,7 @@ class AlbumArtworkServiceImpl implements AlbumArtworkService {
   }
 
   private Optional<Artwork> getFromAlbumFolder(AudioFile audioFile, ArtworkSize artworkSize) {
-    var location = musicDirectoryPathResolver.unRelativize(audioFile);
+    var location = watchFolderFilePathResolver.unRelativize(audioFile);
     var albumFolder = location.getParent();
 
     log.info("Getting album art from album folder for '{} - {}' in {}",

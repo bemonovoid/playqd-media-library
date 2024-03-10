@@ -55,6 +55,8 @@ public interface AudioFileRepository extends IdentityJpaRepository<AudioFileJpaE
                                                                                          String filename,
                                                                                          Pageable pageable);
 
+  Page<AudioFileJpaEntity> findByLocationIsStartingWith(String path, Pageable pageable);
+
   @Query("select a.artistId as id, a.artistName as name, " +
       "count(distinct a.albumName) as albums, count(a.id) as tracks " +
       "from AudioFileJpaEntity a where a.genreId = ?1 " +

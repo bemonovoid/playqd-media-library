@@ -3,7 +3,7 @@ package io.playqd.config;
 import io.playqd.persistence.AudioFileDao;
 import io.playqd.persistence.jpa.dao.JpaAudioFileDao;
 import io.playqd.persistence.jpa.repository.AudioFileRepository;
-import io.playqd.service.MusicDirectoryPathResolver;
+import io.playqd.service.WatchFolderFilePathResolver;
 import io.playqd.service.MetadataFileReader;
 import io.playqd.service.jtagger.JTaggerAudioFileAttributesToDatabaseParamsMapper;
 import io.playqd.service.metadata.FileAttributesToSqlParamsMapper;
@@ -21,8 +21,8 @@ public class MediaLibraryContextConfiguration {
 
   @Bean
   FileAttributesToSqlParamsMapper jTaggerAudioFileAttributesReader(MetadataFileReader metadataFileReader,
-                                                                   MusicDirectoryPathResolver musicDirectoryPathResolver) {
-    return new JTaggerAudioFileAttributesToDatabaseParamsMapper(metadataFileReader, musicDirectoryPathResolver);
+                                                                   WatchFolderFilePathResolver watchFolderFilePathResolver) {
+    return new JTaggerAudioFileAttributesToDatabaseParamsMapper(metadataFileReader, watchFolderFilePathResolver);
   }
 
 }

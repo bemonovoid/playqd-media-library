@@ -1,8 +1,8 @@
-package io.playqd.service.mediasource;
+package io.playqd.service.watchfolder;
 
 import java.nio.file.Path;
 
-public interface MusicDirectoryScanner {
+public interface WatchFolderScanner {
 
   void scan(long dirId);
 

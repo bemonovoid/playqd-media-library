@@ -1,8 +1,8 @@
 package io.playqd.service.metadata;
 
-import io.playqd.commons.data.MusicDirectory;
+import io.playqd.commons.data.WatchFolder;
 
 import java.nio.file.Path;
 
-public record ParamsMapperContext(MusicDirectory musicDirectory, Path path) {
+public record ParamsMapperContext(WatchFolder musicDirectory, Path path) {
 }

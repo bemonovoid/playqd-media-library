@@ -1,8 +1,8 @@
 package io.playqd.api.controller.validator;
 
 import io.playqd.api.controller.request.CreateMusicDirectoryRequest;
-import io.playqd.commons.data.MusicDirectory;
-import io.playqd.service.mediasource.MusicDirectoryManager;
+import io.playqd.commons.data.WatchFolder;
+import io.playqd.persistence.WatchFolderDao;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 import lombok.extern.slf4j.Slf4j;
@@ -16,10 +16,10 @@ import java.util.Optional;
 class CreateMusicDirectoryRequestValidator
     implements ConstraintValidator<ValidCreateMusicDirectoryRequest, CreateMusicDirectoryRequest> {
 
-  private final MusicDirectoryManager musicDirectoryManager;
+  private final WatchFolderDao watchFolderDao;
 
-  CreateMusicDirectoryRequestValidator(MusicDirectoryManager musicDirectoryManager) {
-    this.musicDirectoryManager = musicDirectoryManager;
+  CreateMusicDirectoryRequestValidator(WatchFolderDao watchFolderDao) {
+    this.watchFolderDao = watchFolderDao;
   }
 
   @Override
@@ -40,7 +40,7 @@ class CreateMusicDirectoryRequestValidator
 
     var path = Paths.get(request.getPath());
 
-    Optional<MusicDirectory> existingMusicDirectoryOpt = musicDirectoryManager.getAll().stream()
+    Optional<WatchFolder> existingMusicDirectoryOpt = watchFolderDao.getAll().stream()
         .filter(aSource -> path.startsWith(aSource.path()))
         .findFirst();
 

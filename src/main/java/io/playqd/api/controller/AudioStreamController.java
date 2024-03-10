@@ -2,7 +2,7 @@ package io.playqd.api.controller;
 
 import io.playqd.model.event.AudioFileByteStreamRequestedEvent;
 import io.playqd.persistence.AudioFileDao;
-import io.playqd.service.MusicDirectoryPathResolver;
+import io.playqd.service.WatchFolderFilePathResolver;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.FileSystemResource;
@@ -28,14 +28,14 @@ class AudioStreamController {
 
   private final AudioFileDao audioFileDao;
   private final ApplicationEventPublisher eventPublisher;
-  private final MusicDirectoryPathResolver musicDirectoryPathResolver;
+  private final WatchFolderFilePathResolver watchFolderFilePathResolver;
 
   AudioStreamController(AudioFileDao audioFileDao,
                         ApplicationEventPublisher eventPublisher,
-                        MusicDirectoryPathResolver musicDirectoryPathResolver) {
+                        WatchFolderFilePathResolver watchFolderFilePathResolver) {
     this.audioFileDao = audioFileDao;
     this.eventPublisher = eventPublisher;
-    this.musicDirectoryPathResolver = musicDirectoryPathResolver;
+    this.watchFolderFilePathResolver = watchFolderFilePathResolver;
   }
 
   /**
@@ -49,7 +49,7 @@ class AudioStreamController {
   ResponseEntity<Resource> audioTrackStream(@PathVariable String trackId, @RequestHeader HttpHeaders httpHeaders) {
 
     var audioFile = audioFileDao.getAudioFileByTrackId(trackId);
-    var audioFilePath = musicDirectoryPathResolver.unRelativize(audioFile);
+    var audioFilePath = watchFolderFilePathResolver.unRelativize(audioFile);
 
     log.info("\n---Processed audio streaming info---\nTrack id: {}\nRange: {}\nResource externalUrl: {}\nContent-Type: {}",
         trackId,

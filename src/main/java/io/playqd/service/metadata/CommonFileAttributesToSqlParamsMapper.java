@@ -3,7 +3,7 @@ package io.playqd.service.metadata;
 import io.playqd.exception.AudioMetadataReadException;
 import io.playqd.persistence.jpa.entity.AudioFileJpaEntity;
 import io.playqd.persistence.jpa.entity.AuditableEntity;
-import io.playqd.service.MusicDirectoryPathResolver;
+import io.playqd.service.WatchFolderFilePathResolver;
 import io.playqd.util.FileUtils;
 import io.playqd.util.TimeUtils;
 
@@ -17,10 +17,10 @@ import java.util.Map;
 
 public abstract class CommonFileAttributesToSqlParamsMapper implements FileAttributesToSqlParamsMapper {
 
-  protected final MusicDirectoryPathResolver musicDirectoryPathResolver;
+  protected final WatchFolderFilePathResolver watchFolderFilePathResolver;
 
-  protected CommonFileAttributesToSqlParamsMapper(MusicDirectoryPathResolver musicDirectoryPathResolver) {
-    this.musicDirectoryPathResolver = musicDirectoryPathResolver;
+  protected CommonFileAttributesToSqlParamsMapper(WatchFolderFilePathResolver watchFolderFilePathResolver) {
+    this.watchFolderFilePathResolver = watchFolderFilePathResolver;
   }
 
   @Override
@@ -42,7 +42,7 @@ public abstract class CommonFileAttributesToSqlParamsMapper implements FileAttri
       params.put(AudioFileJpaEntity.COL_FILE_LAST_SCANNED_DATE, Instant.now());
 
       params.put(AudioFileJpaEntity.COL_LOCATION,
-          musicDirectoryPathResolver.relativize(context.musicDirectory().path(), path));
+          watchFolderFilePathResolver.relativize(context.musicDirectory().path(), path));
 
       params.put(AudioFileJpaEntity.COL_FILE_LAST_MODIFIED_DATE,
           TimeUtils.millisToInstant(fileAttributes.lastModifiedTime().toMillis()));

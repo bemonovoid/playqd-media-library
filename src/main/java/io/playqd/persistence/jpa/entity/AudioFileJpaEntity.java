@@ -83,6 +83,7 @@ public class AudioFileJpaEntity extends PersistableAuditableEntity implements Au
   public static final String COL_MB_RELEASE_TYPE = "mb_release_type";
   public static final String COL_MB_RELEASE_GROUP_ID = "mb_release_group_id";
 
+  public static final String FLD_FILE_NAME = "name";
   public static final String FLD_FILE_PLAYBACK_COUNT = "playbackCount";
   public static final String FLD_FILE_LAST_PLAYBACK_DATE = "fileLastPlaybackDate";
   public static final String FLD_FILE_ADDED_TO_WATCH_FOLDER_DATE = "fileAddedToWatchFolderDate";

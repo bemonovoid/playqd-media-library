@@ -1,9 +1,9 @@
 package io.playqd.service.metadata;
 
-import io.playqd.commons.data.MusicDirectoryContentInfo;
+import io.playqd.commons.data.WatchFolderContentInfo;
 import io.playqd.exception.CounterException;
 import io.playqd.persistence.AudioFileDao;
-import io.playqd.service.mediasource.MusicDirectoryManager;
+import io.playqd.service.watchfolder.WatchFolderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -20,10 +20,10 @@ import java.util.stream.Stream;
 class AudioFileMediaMetadataServiceImpl implements MediaMetadataService {
 
   private final AudioFileDao audioFileDao;
-  private final MusicDirectoryManager musicDirectoryManager;
+  private final WatchFolderService musicDirectoryManager;
 
   AudioFileMediaMetadataServiceImpl(AudioFileDao audioFileDao,
-                                    MusicDirectoryManager musicDirectoryManager) {
+                                    WatchFolderService musicDirectoryManager) {
     this.audioFileDao = audioFileDao;
     this.musicDirectoryManager = musicDirectoryManager;
   }
@@ -33,7 +33,7 @@ class AudioFileMediaMetadataServiceImpl implements MediaMetadataService {
     var mediaSourceContentInfo = musicDirectoryManager.info(sourceId);
 
     try (Stream<AudioFileAttributes> audioFileStream = audioFileDao.streamByLocationStartsWith(
-        mediaSourceContentInfo.musicDirectory().path(),
+        mediaSourceContentInfo.watchFolder().path(),
         AudioFileAttributes.class)) {
 
       var extensionCounts = audioFileStream
@@ -63,15 +63,16 @@ class AudioFileMediaMetadataServiceImpl implements MediaMetadataService {
 
   @Override
   public long clear(long sourceId) {
-    return audioFileDao.deleteAllByLocationsStartsWith(musicDirectoryManager.get(sourceId).path());
+//    return audioFileDao.deleteAllByLocationsStartsWith(musicDirectoryManager.get(sourceId).path());
+    return 0;
   }
 
-  private boolean isInSyncWithSource(MusicDirectoryContentInfo musicDirectoryContentInfo,
+  private boolean isInSyncWithSource(WatchFolderContentInfo musicDirectoryContentInfo,
                                      long metadataTotalCount,
                                      Map<String, Long> metadataFormats,
                                      List<String> detailsHolder) {
 
-    var mediaSource = musicDirectoryContentInfo.musicDirectory();
+    var mediaSource = musicDirectoryContentInfo.watchFolder();
 
     if (metadataTotalCount < musicDirectoryContentInfo.totalCount()) {
       detailsHolder.add(String.format("Scanned metadata store is out of sync and is %s file(s) behind.",

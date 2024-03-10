@@ -111,9 +111,16 @@ public class JpaAudioFileDao implements AudioFileDao {
   }
 
   @Override
-  public Page<AudioFile> getAudioFilesByLocationIn(List<String> locations, Pageable pageable) {
-    var result = audioFileRepository.findAllByLocationIn(locations, pageable);
-    return sortByLocationsOrder(locations, result).map(entity -> entity);
+  public Page<AudioFile> getAudioFilesByLocationIn(List<String> locations,
+                                                   boolean sortByLocationsOrder,
+                                                   Pageable pageable) {
+    var sort = Sort.by(AudioFileJpaEntity.FLD_FILE_NAME);
+    var pageQuery = PageRequest.of(0, Integer.MAX_VALUE, sort);
+    var result = audioFileRepository.findAllByLocationIn(locations, pageQuery);
+    if (sortByLocationsOrder) {
+      result = sortByLocationsOrder(locations, result);
+    }
+    return result.map(entity -> entity);
   }
 
   @Override
@@ -157,11 +164,9 @@ public class JpaAudioFileDao implements AudioFileDao {
   }
 
   @Override
-  public Page<AudioFile> getAudioFilesBySourceDirIdAndLocationsIn(long sourceDirId,
-                                                                  List<String> locations,
-                                                                  Pageable pageable) {
-    var result = audioFileRepository.findAllBySourceDirIdAndLocationIn(sourceDirId, locations, pageable);
-    return sortByLocationsOrder(locations, result).map(entity -> entity);
+  public Page<AudioFile> getAudioFilesByLocationStartsWith(Path path, Pageable pageable) {
+    var result = audioFileRepository.findByLocationIsStartingWith(path.toString(), pageable);
+    return result.map(entity -> entity);
   }
 
   @Override

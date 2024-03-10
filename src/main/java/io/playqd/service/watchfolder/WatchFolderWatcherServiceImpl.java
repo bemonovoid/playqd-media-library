@@ -1,8 +1,8 @@
-package io.playqd.service.mediasource;
+package io.playqd.service.watchfolder;
 
 import com.sun.nio.file.ExtendedWatchEventModifier;
-import io.playqd.commons.data.MusicDirectory;
-import io.playqd.model.event.MusicDirectoryContentChangedEvent;
+import io.playqd.commons.data.WatchFolder;
+import io.playqd.model.event.WatchFolderModifiedEvent;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -28,41 +28,41 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class MusicDirectoryWatchServiceImpl implements MusicDirectoryWatchService {
+public class WatchFolderWatcherServiceImpl implements WatchFolderWatcherService {
 
   private final ApplicationEventPublisher eventPublisher;
 
   private final Map<Long, WatchService> watchers = Collections.synchronizedMap(new HashMap<>());
 
-  public MusicDirectoryWatchServiceImpl(ApplicationEventPublisher eventPublisher) {
+  public WatchFolderWatcherServiceImpl(ApplicationEventPublisher eventPublisher) {
     this.eventPublisher = eventPublisher;
   }
 
   @Async
   @Override
-  public void watch(MusicDirectory musicDirectory) {
-    var sourceId = musicDirectory.id();
-    if (watchers.containsKey(sourceId)) {
-      log.warn("WatchService for media source with id: {} is already enabled.", sourceId);
+  public void watch(WatchFolder watchFolder) {
+    var watchFolderId = watchFolder.id();
+    if (watchers.containsKey(watchFolderId)) {
+      log.warn("WatchService for media source with id: {} is already enabled.", watchFolderId);
       return; //TODO log warning
     }
 
-    Path sourcePath = musicDirectory.path();
+    Path sourcePath = watchFolder.path();
 
     if (!Files.exists(sourcePath)) {
-      log.error("Path '{}' in source with id: '{}' does not exist", sourcePath, sourceId);
+      log.error("Path '{}' in source with id: '{}' does not exist", sourcePath, watchFolderId);
       return;
     }
 
-    log.info("Enabling new WatcherService for media source with id: {}", sourceId);
+    log.info("Enabling new WatcherService for media source with id: {}", watchFolderId);
 
     try (WatchService watchService = FileSystems.getDefault().newWatchService()) {
-      watchers.put(sourceId, watchService);
-      log.info("WatcherService for media source with id: {} was registered and is now starting ...", sourceId);
-      startWatcher(watchService, musicDirectory, sourcePath);
+      watchers.put(watchFolderId, watchService);
+      log.info("WatcherService for media source with id: {} was registered and is now starting ...", watchFolderId);
+      startWatcher(watchService, watchFolder, sourcePath);
     } catch (IOException e) {
       log.error("Failed to register new WatcherService for media source with id: {}. {}",
-          sourceId, e.getMessage());
+          watchFolderId, e.getMessage());
     }
   }
 
@@ -75,7 +75,7 @@ public class MusicDirectoryWatchServiceImpl implements MusicDirectoryWatchServic
     }
   }
 
-  private void startWatcher(WatchService watchService, MusicDirectory musicDirectory, Path watchable) {
+  private void startWatcher(WatchService watchService, WatchFolder watchFolder, Path watchable) {
 
     WatchEvent.Kind<?>[] events = {
         StandardWatchEventKinds.ENTRY_CREATE,
@@ -107,7 +107,7 @@ public class MusicDirectoryWatchServiceImpl implements MusicDirectoryWatchServic
         } else {
           key = watchService.poll(5, TimeUnit.SECONDS);
           if (key == null) {
-            notifyWatchedContentChanged(musicDirectory, watchedContent);
+            notifyWatchedContentChanged(watchFolder, watchedContent);
             continue;
           }
         }
@@ -144,12 +144,12 @@ public class MusicDirectoryWatchServiceImpl implements MusicDirectoryWatchServic
 
     }
 
-    notifyWatchedContentChanged(musicDirectory, watchedContent);
+    notifyWatchedContentChanged(watchFolder, watchedContent);
 
-    stop(musicDirectory.id());
+    stop(watchFolder.id());
   }
 
-  private void notifyWatchedContentChanged(MusicDirectory musicDirectory, Map<String, Set<Path>> watchedContent) {
+  private void notifyWatchedContentChanged(WatchFolder watchFolder, Map<String, Set<Path>> watchedContent) {
     if (watchedContent.isEmpty()) {
       return;
     }
@@ -157,14 +157,14 @@ public class MusicDirectoryWatchServiceImpl implements MusicDirectoryWatchServic
         .flatMap(Collection::stream)
         .map(path -> {
           var parentPath = path;
-          while (!parentPath.getParent().equals(musicDirectory.path())) {
+          while (!parentPath.getParent().equals(watchFolder.path())) {
             parentPath = parentPath.getParent();
           }
           return parentPath;
         })
         .collect(Collectors.toSet());
 
-    eventPublisher.publishEvent(new MusicDirectoryContentChangedEvent(musicDirectory, changedContentDirs));
+    eventPublisher.publishEvent(new WatchFolderModifiedEvent(watchFolder, changedContentDirs));
 
     watchedContent.clear();
   }

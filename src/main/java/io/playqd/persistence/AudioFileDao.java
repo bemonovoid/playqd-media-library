@@ -46,9 +46,9 @@ public interface AudioFileDao {
 
   Page<AudioFile> getAudioFilesAddedToWatchFolderAfterDate(LocalDate afterDate, Pageable pageable);
 
-  Page<AudioFile> getAudioFilesByLocationIn(List<String> locations, Pageable pageable);
+  Page<AudioFile> getAudioFilesByLocationIn(List<String> locations, boolean sortByLocationsOrder, Pageable pageable);
 
-  Page<AudioFile> getAudioFilesBySourceDirIdAndLocationsIn(long sourceDirId, List<String> locations, Pageable pageable);
+  Page<AudioFile> getAudioFilesByLocationStartsWith(Path path, Pageable pageable);
 
   Page<Artist> getGenreArtists(String genreId, Pageable pageable);
 

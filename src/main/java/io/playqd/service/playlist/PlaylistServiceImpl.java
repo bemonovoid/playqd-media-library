@@ -2,7 +2,7 @@ package io.playqd.service.playlist;
 
 import io.playqd.commons.data.Playlist;
 import io.playqd.commons.data.PlaylistFormat;
-import io.playqd.service.MusicDirectoryPathResolver;
+import io.playqd.service.WatchFolderFilePathResolver;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -24,12 +24,12 @@ public class PlaylistServiceImpl implements PlaylistService {
   private static final Map<String, Playlist> PLAYLIST_FILES_CACHE = new HashMap<>();
   private static final EnumSet<PlaylistFormat> SUPPORTED_FORMATS = EnumSet.of(PlaylistFormat.m3u8);
 
-  private final MusicDirectoryPathResolver musicDirectoryPathResolver;
+  private final WatchFolderFilePathResolver watchFolderFilePathResolver;
   private final Set<PlaylistFilesFetcher> playlistFilesFetchers;
 
-  public PlaylistServiceImpl(MusicDirectoryPathResolver musicDirectoryPathResolver,
+  public PlaylistServiceImpl(WatchFolderFilePathResolver watchFolderFilePathResolver,
                              Set<PlaylistFilesFetcher> playlistFilesFetchers) {
-    this.musicDirectoryPathResolver = musicDirectoryPathResolver;
+    this.watchFolderFilePathResolver = watchFolderFilePathResolver;
     this.playlistFilesFetchers = playlistFilesFetchers;
   }
 
@@ -73,7 +73,7 @@ public class PlaylistServiceImpl implements PlaylistService {
           .filter(line -> line.charAt(0) != '#' && line.charAt(0) != '\uFEFF')
           .map(PlaylistServiceImpl::getValidPath)
           .filter(Objects::nonNull)
-          .map(musicDirectoryPathResolver::relativize)
+          .map(watchFolderFilePathResolver::relativize)
           .filter(Objects::nonNull)
           .map(Path::toString)
           .toList();

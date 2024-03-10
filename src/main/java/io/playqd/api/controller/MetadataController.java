@@ -5,7 +5,6 @@ import io.playqd.commons.data.Album;
 import io.playqd.commons.data.AlbumQueryParams;
 import io.playqd.commons.data.Artist;
 import io.playqd.commons.data.ArtistQueryParams;
-import io.playqd.commons.data.DirectoryItem;
 import io.playqd.commons.data.Genre;
 import io.playqd.commons.data.ItemType;
 import io.playqd.commons.data.Track;
@@ -13,8 +12,9 @@ import io.playqd.model.AudioFile;
 import io.playqd.persistence.AudioFileDao;
 import io.playqd.persistence.MetadataReaderDao;
 import io.playqd.persistence.WatchFolderFileEventLogDao;
-import io.playqd.service.mediasource.MusicDirectoryManager;
+import io.playqd.service.WatchFolderFilePathResolver;
 import io.playqd.service.playlist.PlaylistService;
+import io.playqd.service.watchfolder.WatchFolderBrowser;
 import io.playqd.util.FileUtils;
 import io.playqd.util.TimeUtils;
 import org.springframework.data.domain.Page;
@@ -41,19 +41,22 @@ class MetadataController {
   private final AudioFileDao audioFileDao;
   private final PlaylistService playlistService;
   private final MetadataReaderDao metadataReaderDao;
-  private final MusicDirectoryManager musicDirectoryManager;
+  private final WatchFolderBrowser watchFolderBrowser;
   private final WatchFolderFileEventLogDao watchFolderFileEventLogDao;
+  private final WatchFolderFilePathResolver watchFolderFilePathResolver;
 
   MetadataController(AudioFileDao audioFileDao,
                      PlaylistService playlistService,
                      MetadataReaderDao metadataReaderDao,
-                     MusicDirectoryManager musicDirectoryManager,
-                     WatchFolderFileEventLogDao watchFolderFileEventLogDao) {
+                     WatchFolderBrowser watchFolderBrowser,
+                     WatchFolderFileEventLogDao watchFolderFileEventLogDao,
+                     WatchFolderFilePathResolver watchFolderFilePathResolver) {
     this.audioFileDao = audioFileDao;
     this.playlistService = playlistService;
     this.metadataReaderDao = metadataReaderDao;
-    this.musicDirectoryManager = musicDirectoryManager;
+    this.watchFolderBrowser = watchFolderBrowser;
     this.watchFolderFileEventLogDao = watchFolderFileEventLogDao;
+    this.watchFolderFilePathResolver = watchFolderFilePathResolver;
   }
 
   @GetMapping("/artists")
@@ -86,12 +89,11 @@ class MetadataController {
                      @RequestParam(name = "albumId", required = false) String albumId,
                      @RequestParam(name = "genreId", required = false) String genreId,
                      @RequestParam(name = "playlistId", required = false) String playlistId,
-                     @RequestParam(name = "sourceDirId", required = false, defaultValue = "0") long sourceDirId,
                      @RequestParam(name = "title", required = false) String title,
                      @RequestParam(name = "played", required = false) Boolean played,
                      @RequestParam(name = "lastRecentlyAdded", required = false) boolean lastRecentlyAdded,
                      @RequestParam(name = "recentlyAddedSinceDuration", required = false) String recentlyAddedSinceDuration,
-                     @RequestParam(name = "location", required = false, defaultValue = "") String location) {
+                     @RequestParam(name = "folderId", required = false, defaultValue = "") String folderId) {
     if (StringUtils.hasLength(artistId)) {
       return audioFileDao.getAudioFilesByArtistId(artistId, page).map(this::mapToTrack);
     }
@@ -106,7 +108,7 @@ class MetadataController {
 
     if (StringUtils.hasLength(playlistId)) {
       var playlistFiles = playlistService.playlistFiles(playlistId);
-      return audioFileDao.getAudioFilesByLocationIn(playlistFiles, page).map(this::mapToTrack);
+      return audioFileDao.getAudioFilesByLocationIn(playlistFiles, true, page).map(this::mapToTrack);
     }
 
     if (StringUtils.hasText(title)) {
@@ -117,12 +119,12 @@ class MetadataController {
       return audioFileDao.getAudioFilesByPlayed(played, page).map(this::mapToTrack);
     }
 
-    if (sourceDirId > 0) {
-      var locations = musicDirectoryManager.tree(sourceDirId, location, page).stream()
-          .filter(directoryItem -> ItemType.audioFile == directoryItem.itemType())
-          .map(DirectoryItem::path)
+    if (StringUtils.hasLength(folderId)) {
+      var audioItems = watchFolderBrowser.browse(folderId, ItemType.audioFile);
+      var locations = audioItems.stream()
+          .map(watchFolderItem -> watchFolderFilePathResolver.relativize(watchFolderItem.path()).toString())
           .toList();
-      return audioFileDao.getAudioFilesBySourceDirIdAndLocationsIn(sourceDirId, locations, page).map(this::mapToTrack);
+      return audioFileDao.getAudioFilesByLocationIn(locations, false, page).map(this::mapToTrack);
     }
 
     if (lastRecentlyAdded) {
