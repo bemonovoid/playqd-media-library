@@ -4,7 +4,6 @@ import io.playqd.commons.data.ArtworkSize;
 import io.playqd.config.cache.CacheNames;
 import io.playqd.model.AudioFile;
 import io.playqd.persistence.AudioFileDao;
-import io.playqd.service.WatchFolderFilePathResolver;
 import io.playqd.util.FileUtils;
 import io.playqd.util.ImageUtils;
 import io.playqd.util.SupportedImageFiles;
@@ -24,11 +23,9 @@ import java.util.stream.Stream;
 class AlbumArtworkServiceImpl implements AlbumArtworkService {
 
   private final AudioFileDao audioFileDao;
-  private final WatchFolderFilePathResolver watchFolderFilePathResolver;
 
-  public AlbumArtworkServiceImpl(AudioFileDao audioFileDao, WatchFolderFilePathResolver watchFolderFilePathResolver) {
+  public AlbumArtworkServiceImpl(AudioFileDao audioFileDao) {
     this.audioFileDao = audioFileDao;
-    this.watchFolderFilePathResolver = watchFolderFilePathResolver;
   }
 
   @Override
@@ -45,9 +42,7 @@ class AlbumArtworkServiceImpl implements AlbumArtworkService {
       log.info("Getting album art from audio file metadata for '{} - {}'",
           audioFile.artistName(), audioFile.albumName());
 
-      var audioFilePath = watchFolderFilePathResolver.unRelativize(audioFile);
-
-      var jTaggerAudioFile = AudioFileIO.read(audioFilePath.toFile());
+      var jTaggerAudioFile = AudioFileIO.read(audioFile.path().toFile());
 
       var artwork = jTaggerAudioFile.getTag().getFirstArtwork();
 
@@ -73,8 +68,7 @@ class AlbumArtworkServiceImpl implements AlbumArtworkService {
   }
 
   private Optional<Artwork> getFromAlbumFolder(AudioFile audioFile, ArtworkSize artworkSize) {
-    var location = watchFolderFilePathResolver.unRelativize(audioFile);
-    var albumFolder = location.getParent();
+    var albumFolder = audioFile.path().getParent();
 
     log.info("Getting album art from album folder for '{} - {}' in {}",
         audioFile.artistName(), audioFile.albumName(), albumFolder);
@@ -90,7 +84,7 @@ class AlbumArtworkServiceImpl implements AlbumArtworkService {
           () -> log.warn("Album art wasn't found"));
       return mayBeAlbumArt;
     } catch (Exception e) {
-      log.error("Album artwork search failed at externalUrl: {}. {}", location, e.getMessage());
+      log.error("Album artwork search failed at externalUrl: {}. {}", audioFile.path(), e.getMessage());
       return Optional.empty();
     }
   }

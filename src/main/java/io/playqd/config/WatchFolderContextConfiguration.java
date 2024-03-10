@@ -6,8 +6,8 @@ import io.playqd.config.properties.PlayqdProperties;
 import io.playqd.persistence.AudioFileDao;
 import io.playqd.persistence.WatchFolderDao;
 import io.playqd.persistence.simple.WatchFolderDaoImpl;
-import io.playqd.service.WatchFolderFilePathResolver;
 import io.playqd.service.metadata.FileAttributesToSqlParamsMapper;
+import io.playqd.service.metadata.FileAttributesToSqlParamsMapperFactory;
 import io.playqd.service.watchfolder.WatchFolderBrowser;
 import io.playqd.service.watchfolder.WatchFolderBrowserImpl;
 import io.playqd.service.watchfolder.WatchFolderScanner;
@@ -44,10 +44,8 @@ public class WatchFolderContextConfiguration {
   WatchFolderScanner watchFolderScanner(AudioFileDao audioFileDao,
                                         WatchFolderDao watchFolderDao,
                                         ApplicationEventPublisher eventPublisher,
-                                        WatchFolderFilePathResolver watchFolderFilePathResolver,
-                                        FileAttributesToSqlParamsMapper fileAttributesToSqlParamsMapper) {
-    return new WatchFolderScannerImpl(
-        audioFileDao, watchFolderDao, eventPublisher, watchFolderFilePathResolver, fileAttributesToSqlParamsMapper);
+                                        FileAttributesToSqlParamsMapperFactory toSqlParamsMapperFactory) {
+    return new WatchFolderScannerImpl(audioFileDao, watchFolderDao, eventPublisher, toSqlParamsMapperFactory);
   }
 
   @Bean

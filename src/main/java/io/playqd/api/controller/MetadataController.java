@@ -12,7 +12,6 @@ import io.playqd.model.AudioFile;
 import io.playqd.persistence.AudioFileDao;
 import io.playqd.persistence.MetadataReaderDao;
 import io.playqd.persistence.WatchFolderFileEventLogDao;
-import io.playqd.service.WatchFolderFilePathResolver;
 import io.playqd.service.playlist.PlaylistService;
 import io.playqd.service.watchfolder.WatchFolderBrowser;
 import io.playqd.util.FileUtils;
@@ -43,20 +42,17 @@ class MetadataController {
   private final MetadataReaderDao metadataReaderDao;
   private final WatchFolderBrowser watchFolderBrowser;
   private final WatchFolderFileEventLogDao watchFolderFileEventLogDao;
-  private final WatchFolderFilePathResolver watchFolderFilePathResolver;
 
   MetadataController(AudioFileDao audioFileDao,
                      PlaylistService playlistService,
                      MetadataReaderDao metadataReaderDao,
                      WatchFolderBrowser watchFolderBrowser,
-                     WatchFolderFileEventLogDao watchFolderFileEventLogDao,
-                     WatchFolderFilePathResolver watchFolderFilePathResolver) {
+                     WatchFolderFileEventLogDao watchFolderFileEventLogDao) {
     this.audioFileDao = audioFileDao;
     this.playlistService = playlistService;
     this.metadataReaderDao = metadataReaderDao;
     this.watchFolderBrowser = watchFolderBrowser;
     this.watchFolderFileEventLogDao = watchFolderFileEventLogDao;
-    this.watchFolderFilePathResolver = watchFolderFilePathResolver;
   }
 
   @GetMapping("/artists")
@@ -122,7 +118,7 @@ class MetadataController {
     if (StringUtils.hasLength(folderId)) {
       var audioItems = watchFolderBrowser.browse(folderId, ItemType.audioFile);
       var locations = audioItems.stream()
-          .map(watchFolderItem -> watchFolderFilePathResolver.relativize(watchFolderItem.path()).toString())
+          .map(watchFolderItem -> watchFolderItem.path().toString())
           .toList();
       return audioFileDao.getAudioFilesByLocationIn(locations, false, page).map(this::mapToTrack);
     }

@@ -2,7 +2,6 @@ package io.playqd.service.playlist;
 
 import io.playqd.commons.data.Playlist;
 import io.playqd.commons.data.PlaylistFormat;
-import io.playqd.service.WatchFolderFilePathResolver;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -24,12 +23,9 @@ public class PlaylistServiceImpl implements PlaylistService {
   private static final Map<String, Playlist> PLAYLIST_FILES_CACHE = new HashMap<>();
   private static final EnumSet<PlaylistFormat> SUPPORTED_FORMATS = EnumSet.of(PlaylistFormat.m3u8);
 
-  private final WatchFolderFilePathResolver watchFolderFilePathResolver;
   private final Set<PlaylistFilesFetcher> playlistFilesFetchers;
 
-  public PlaylistServiceImpl(WatchFolderFilePathResolver watchFolderFilePathResolver,
-                             Set<PlaylistFilesFetcher> playlistFilesFetchers) {
-    this.watchFolderFilePathResolver = watchFolderFilePathResolver;
+  public PlaylistServiceImpl(Set<PlaylistFilesFetcher> playlistFilesFetchers) {
     this.playlistFilesFetchers = playlistFilesFetchers;
   }
 
@@ -72,8 +68,6 @@ public class PlaylistServiceImpl implements PlaylistService {
           // Some players(winamp) prepend '\uFEFF' 65279 to the first line: '#EXT'
           .filter(line -> line.charAt(0) != '#' && line.charAt(0) != '\uFEFF')
           .map(PlaylistServiceImpl::getValidPath)
-          .filter(Objects::nonNull)
-          .map(watchFolderFilePathResolver::relativize)
           .filter(Objects::nonNull)
           .map(Path::toString)
           .toList();

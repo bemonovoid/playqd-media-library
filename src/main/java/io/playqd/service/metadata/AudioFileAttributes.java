@@ -2,7 +2,6 @@ package io.playqd.service.metadata;
 
 import jakarta.persistence.Transient;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
@@ -25,8 +24,6 @@ public interface AudioFileAttributes {
   String getLocation();
 
   String getExtension();
-
-  long getSourceDirId();
 
   Instant getFileLastModifiedDate();
 

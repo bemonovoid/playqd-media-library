@@ -171,12 +171,6 @@ public class JpaAudioFileDao implements AudioFileDao {
 
   @Override
   @Transactional(readOnly = true)
-  public <T> Stream<T> streamBySourceDirId(long sourceDirId, Class<T> type) {
-    return audioFileRepository.findBySourceDirId(sourceDirId, type);
-  }
-
-  @Override
-  @Transactional(readOnly = true)
   public <T> Stream<T> streamByLocationStartsWith(Path basePath, Class<T> type) {
     return audioFileRepository.findByLocationIsStartingWith(basePath.toString(), type);
   }

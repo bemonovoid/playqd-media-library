@@ -2,7 +2,6 @@ package io.playqd.service.jtagger;
 
 import io.playqd.exception.AudioMetadataReadException;
 import io.playqd.persistence.jpa.entity.AudioFileJpaEntity;
-import io.playqd.service.WatchFolderFilePathResolver;
 import io.playqd.service.MetadataFileReader;
 import io.playqd.service.metadata.CommonFileAttributesToSqlParamsMapper;
 import io.playqd.service.metadata.MetadataFile;
@@ -38,9 +37,7 @@ public class JTaggerAudioFileAttributesToDatabaseParamsMapper extends CommonFile
 
   private final MetadataFileReader metadataFileReader;
 
-  public JTaggerAudioFileAttributesToDatabaseParamsMapper(MetadataFileReader metadataFileReader,
-                                                          WatchFolderFilePathResolver watchFolderFilePathResolver) {
-    super(watchFolderFilePathResolver);
+  public JTaggerAudioFileAttributesToDatabaseParamsMapper(MetadataFileReader metadataFileReader) {
     this.metadataFileReader = metadataFileReader;
   }
 
@@ -92,11 +89,8 @@ public class JTaggerAudioFileAttributesToDatabaseParamsMapper extends CommonFile
 
       // Track
       var trackName = AudioFileTagReader.readFromTag(jTaggerAudioFile, FieldKey.TITLE, () -> fileName);
-      // Using file.getName() instead of trackName because tracks may have equal names
-      var trackId = UUIDS.computeIfAbsent(
-          artistName + albumName + file.getName(), UUIDV3Ids::create);
       params.put(AudioFileJpaEntity.COL_TRACK_NAME, trackName);
-      params.put(AudioFileJpaEntity.COL_TRACK_ID, trackId);
+      params.put(AudioFileJpaEntity.COL_TRACK_ID, UUIDV3Ids.create(file.getPath()));
       params.put(AudioFileJpaEntity.COL_TRACK_NUMBER,
           AudioFileTagReader.readFromTag(jTaggerAudioFile, FieldKey.TRACK));
       params.put(AudioFileJpaEntity.COL_TRACK_LENGTH, jTaggerAudioFile.getAudioHeader().getTrackLength());

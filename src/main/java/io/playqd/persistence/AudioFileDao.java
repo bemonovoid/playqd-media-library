@@ -54,8 +54,6 @@ public interface AudioFileDao {
 
   List<Album> getAlbumsAddedAfterDate(LocalDate afterDate);
 
-  <T> Stream<T> streamBySourceDirId(long sourceDirId, Class<T> type);
-
   <T> Stream<T> streamByLocationStartsWith(Path basePath, Class<T> type);
 
   int insertAll(List<Map<String, Object>> audioFilesData);

@@ -2,7 +2,6 @@ package io.playqd.api.controller;
 
 import io.playqd.model.event.AudioFileByteStreamRequestedEvent;
 import io.playqd.persistence.AudioFileDao;
-import io.playqd.service.WatchFolderFilePathResolver;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.FileSystemResource;
@@ -28,20 +27,16 @@ class AudioStreamController {
 
   private final AudioFileDao audioFileDao;
   private final ApplicationEventPublisher eventPublisher;
-  private final WatchFolderFilePathResolver watchFolderFilePathResolver;
 
-  AudioStreamController(AudioFileDao audioFileDao,
-                        ApplicationEventPublisher eventPublisher,
-                        WatchFolderFilePathResolver watchFolderFilePathResolver) {
+  AudioStreamController(AudioFileDao audioFileDao, ApplicationEventPublisher eventPublisher) {
     this.audioFileDao = audioFileDao;
     this.eventPublisher = eventPublisher;
-    this.watchFolderFilePathResolver = watchFolderFilePathResolver;
   }
 
   /**
    * See: Spring's {@link AbstractMessageConverterMethodProcessor} (line: 186 & 194) implementation that handles byte ranges
    *
-   * @param audioFileId
+   * @param trackId
    * @param httpHeaders
    * @return Audio file stream at the given byte range.
    */
@@ -49,7 +44,7 @@ class AudioStreamController {
   ResponseEntity<Resource> audioTrackStream(@PathVariable String trackId, @RequestHeader HttpHeaders httpHeaders) {
 
     var audioFile = audioFileDao.getAudioFileByTrackId(trackId);
-    var audioFilePath = watchFolderFilePathResolver.unRelativize(audioFile);
+    var audioFilePath = audioFile.path();
 
     log.info("\n---Processed audio streaming info---\nTrack id: {}\nRange: {}\nResource externalUrl: {}\nContent-Type: {}",
         trackId,

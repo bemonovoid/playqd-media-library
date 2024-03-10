@@ -1,14 +1,12 @@
 package io.playqd.service.watchfolder;
 
-import io.playqd.commons.data.WatchFolder;
 import io.playqd.exception.MediaSourceScannerException;
 import io.playqd.model.event.AudioFileMetadataAddedEvent;
 import io.playqd.persistence.AudioFileDao;
 import io.playqd.persistence.WatchFolderDao;
 import io.playqd.persistence.jpa.entity.AudioFileJpaEntity;
-import io.playqd.service.WatchFolderFilePathResolver;
 import io.playqd.service.metadata.AudioFileAttributes;
-import io.playqd.service.metadata.FileAttributesToSqlParamsMapper;
+import io.playqd.service.metadata.FileAttributesToSqlParamsMapperFactory;
 import io.playqd.service.metadata.ParamsMapperContext;
 import io.playqd.util.SupportedAudioFiles;
 import io.playqd.util.TimeUtils;
@@ -43,63 +41,33 @@ public class WatchFolderScannerImpl implements WatchFolderScanner {
   private final AudioFileDao audioFileDao;
   private final WatchFolderDao watchFolderDao;
   private final ApplicationEventPublisher eventPublisher;
-  private final WatchFolderFilePathResolver watchFolderFilePathResolver;
-  private final FileAttributesToSqlParamsMapper fileAttributesMapper;
+  private final FileAttributesToSqlParamsMapperFactory fileAttributesToSqlParamsMapperFactory;
 
   public WatchFolderScannerImpl(AudioFileDao audioFileDao,
                                 WatchFolderDao watchFolderDao,
                                 ApplicationEventPublisher eventPublisher,
-                                WatchFolderFilePathResolver watchFolderFilePathResolver,
-                                FileAttributesToSqlParamsMapper fileAttributesMapper) {
+                                FileAttributesToSqlParamsMapperFactory fileAttributesToSqlParamsMapperFactory) {
     this.audioFileDao = audioFileDao;
     this.eventPublisher = eventPublisher;
     this.watchFolderDao = watchFolderDao;
-    this.fileAttributesMapper = fileAttributesMapper;
-    this.watchFolderFilePathResolver = watchFolderFilePathResolver;
-  }
-
-  private static Predicate<Path> ignoredDirs(Set<String> ignoredDirs) {
-    if (CollectionUtils.isEmpty(ignoredDirs)) {
-      return path -> true;
-    }
-    return path -> !ignoredDirs.contains(path.getParent().getFileName().toString());
-  }
-
-  private static String getReportStringTemplate() {
-    return """
-                    
-                    
-        <-------------SCAN REPORT START------------->
-                  
-        {}
-                               
-        ------------
-        files added:    {}
-        files modified: {}
-        files deleted:  {}
-        ------------
-        Duration:       {}
-        Files scanned:  {}
-                    
-        <-------------SCAN REPORT END--------------->
-        """;
+    this.fileAttributesToSqlParamsMapperFactory = fileAttributesToSqlParamsMapperFactory;
   }
 
   @Override
   @Async
   @Transactional(propagation = Propagation.REQUIRES_NEW)
-  public void scan(long dirId) {
-    scan(dirId, null);
+  public void scan(long watchFolderId) {
+    scan(watchFolderId, null);
   }
 
   @Override
   @Async
   @Transactional(propagation = Propagation.REQUIRED)
-  public void scan(long dirId, Path subPath) {
+  public void scan(long watchFolderId, Path subPath) {
 
-    var musicDirectory = getMusicDirectory(dirId, subPath);
+    var watchFolder = watchFolderDao.get(watchFolderId);
 
-    var scanPath = subPath != null ? subPath : musicDirectory.path();
+    var scanPath = subPath != null ? subPath : watchFolder.path();
 
     try (Stream<Path> pathsStream = Files.walk(scanPath)) {
 
@@ -108,28 +76,30 @@ public class WatchFolderScannerImpl implements WatchFolderScanner {
       Stream<AudioFileAttributes> prevScannedAudioFilesStream;
 
       if (subPath != null) {
-        var relativePath = watchFolderFilePathResolver.relativize(subPath);
-        prevScannedAudioFilesStream = audioFileDao.streamByLocationStartsWith(relativePath, AudioFileAttributes.class);
+        prevScannedAudioFilesStream = audioFileDao.streamByLocationStartsWith(subPath, AudioFileAttributes.class);
       } else {
-        prevScannedAudioFilesStream = audioFileDao.streamBySourceDirId(dirId, AudioFileAttributes.class);
+        prevScannedAudioFilesStream =
+            audioFileDao.streamByLocationStartsWith(watchFolder.path(), AudioFileAttributes.class);
       }
 
       var prevScannedAudioFiles = Collections.synchronizedMap(
-          prevScannedAudioFilesStream.collect(Collectors.toMap(watchFolderFilePathResolver::unRelativize, value -> value)));
+          prevScannedAudioFilesStream.collect(Collectors.toMap(AudioFileAttributes::getPath, value -> value)));
 
       var newAudioFiles = Collections.synchronizedList(new LinkedList<Map<String, Object>>());
       var modifiedAudioFiles = Collections.synchronizedMap(new LinkedHashMap<Long, Map<String, Object>>());
 
       var totalFilesScanned = new AtomicLong(0);
 
+      var fileAttributesMapper = fileAttributesToSqlParamsMapperFactory.get();
+
       pathsStream
           .parallel()
-          .filter(ignoredDirs(musicDirectory.ignoredDirectories()))
+          .filter(ignoredDirs(watchFolder.ignoredDirectories()))
           .filter(SupportedAudioFiles::isSupportedAudioFile)
           .forEach(p -> {
             totalFilesScanned.incrementAndGet();
             var prevScannedAudioFile = prevScannedAudioFiles.remove(p);
-            var mapperContext = new ParamsMapperContext(musicDirectory, p);
+            var mapperContext = new ParamsMapperContext(watchFolder, p);
             if (prevScannedAudioFile != null) {
               if (AudioFileAttributes.wasModified(p, prevScannedAudioFile)) {
                 modifiedAudioFiles.put(prevScannedAudioFile.getId(), fileAttributesMapper.toSqlParams(mapperContext));
@@ -150,7 +120,7 @@ public class WatchFolderScannerImpl implements WatchFolderScanner {
       var duration = TimeUtils.durationToDisplayString(scanDuration);
 
       log.info(getReportStringTemplate(),
-          musicDirectory,
+          watchFolder,
           newAudioFiles.size(),
           modifiedAudioFiles.size(),
           obsoleteAudioFiles.size(),
@@ -202,12 +172,30 @@ public class WatchFolderScannerImpl implements WatchFolderScanner {
     audioFileDao.updateAll(modifiedItemsInsertParams);
   }
 
-  private WatchFolder getMusicDirectory(long dirId, Path path) {
-    if (path != null) {
-      return watchFolderFilePathResolver.resolveWatchFolder(path)
-          .orElseThrow(() -> new MediaSourceScannerException(String.format("Location does not exist: %s", path)));
-    } else {
-      return watchFolderDao.get(dirId);
+  private static Predicate<Path> ignoredDirs(Set<String> ignoredDirs) {
+    if (CollectionUtils.isEmpty(ignoredDirs)) {
+      return path -> true;
     }
+    return path -> !ignoredDirs.contains(path.getParent().getFileName().toString());
+  }
+
+  private static String getReportStringTemplate() {
+    return """
+                    
+                    
+        <-------------SCAN REPORT START------------->
+                  
+        {}
+                               
+        ------------
+        files added:    {}
+        files modified: {}
+        files deleted:  {}
+        ------------
+        Duration:       {}
+        Files scanned:  {}
+                    
+        <-------------SCAN REPORT END--------------->
+        """;
   }
 }

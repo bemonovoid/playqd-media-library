@@ -82,7 +82,7 @@ class AudioFileMediaMetadataServiceImpl implements MediaMetadataService {
           metadataTotalCount - musicDirectoryContentInfo.totalCount()));
     }
 
-    var modifiedFiles = audioFileDao.streamBySourceDirId(mediaSource.id(), AudioFileAttributes.class)
+    var modifiedFiles = audioFileDao.streamByLocationStartsWith(mediaSource.path(), AudioFileAttributes.class)
         .parallel()
         .filter(AudioFileAttributes::wasModified)
         .toList();

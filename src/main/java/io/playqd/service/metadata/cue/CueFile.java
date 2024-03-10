@@ -23,9 +23,9 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 @Slf4j
 public final class CueFile implements MetadataFile {
 
-  private static final String ATTR_PERFORMER = "PERFORMER";
   private static final String ATTR_TITLE = "TITLE";
   private static final String ATTR_REM_DATE = "REM DATE";
+  private static final String ATTR_PERFORMER = "PERFORMER";
 
   private static final List<Charset> CHARSETS = List.of(UTF_8, Charset.forName("KOI8-U"), UTF_16);
 
