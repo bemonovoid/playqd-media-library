@@ -1,5 +1,8 @@
 rootProject.name = 'playqd-media-library'
 
+include 'playqd-commons'
+include 'playqd-media-library-server'
+
 dependencyResolutionManagement {
     versionCatalogs {
         libs {
@@ -7,18 +10,23 @@ dependencyResolutionManagement {
 //            version('fasterXml', '2.15.3')
             version('springDependencyPlugin', '1.1.0')
             version('lombok', '1.18.30')
+            version('logback', '1.4.11')
             version('ehcache', '3.10.8')
             version('mysqlConnector', '8.0.33')
             version('flywaydb', '10.4.1')
+            version('fasterxml', '2.15.3')
             version('springBoot', '3.2.0')
+            version('springDataCommons', '3.2.0')
             version('springDocOpenApi', '2.3.0')
             version('junitJupiter', '5.10.1')
             version('junitPlatform', '1.10.1')
 
-            version('playqd-commons', '0.0.2')
-
+            library('logback-core', 'ch.qos.logback', 'logback-core').versionRef('logback')
+            library('logback-classic', 'ch.qos.logback', 'logback-classic').versionRef('logback')
+            library ('javax-validation', 'jakarta.validation', 'jakarta.validation-api').version('3.0.2')
             library('ehcache', 'org.ehcache', 'ehcache').versionRef('ehcache')
             library('lombok', 'org.projectlombok', 'lombok').versionRef('lombok')
+            library('jackson-annotation', 'com.fasterxml.jackson.core', 'jackson-annotations').versionRef('fasterxml')
             library('jackson-xml-databind', 'com.fasterxml.jackson.dataformat', 'jackson-dataformat-xml').withoutVersion()
             library('flyway-db', 'org.flywaydb', 'flyway-core').versionRef('flywaydb')
             library('flyway-mysql', 'org.flywaydb', 'flyway-mysql').versionRef('flywaydb')
@@ -26,8 +34,11 @@ dependencyResolutionManagement {
             library('mysql', 'mysql', 'mysql-connector-java').versionRef('mysqlConnector')
             library('jaudiotagger', 'net.jthink', 'jaudiotagger').version('3.0.1')
             library('apache-tika', 'org.apache.tika', 'tika-core').version('2.8.0')
+            library('jython', 'org.python', 'jython-slim').version('2.7.3')
+
             library('micrometer-prometheus', 'io.micrometer', 'micrometer-registry-prometheus').version('1.11.3')
 
+            library('spring-data-commons', 'org.springframework.data', 'spring-data-commons').versionRef('springDataCommons')
             library('spring-boot-actuator', 'org.springframework.boot', 'spring-boot-starter-actuator').versionRef('springBoot')
             library('spring-boot-cache', 'org.springframework.boot', 'spring-boot-starter-cache').versionRef('springBoot')
             library('spring-boot-data-jdbc', 'org.springframework.boot', 'spring-boot-starter-data-jdbc').versionRef('springBoot')
@@ -41,8 +52,7 @@ dependencyResolutionManagement {
 
             library('spring-doc-openapi', 'org.springdoc', 'springdoc-openapi-starter-webmvc-ui').versionRef('springDocOpenApi')
 
-            library('playqd-utils', 'io.playqd.commons', 'playqd-utils').versionRef('playqd-commons')
-            library('playqd-data', 'io.playqd.commons', 'playqd-data').versionRef('playqd-commons')
+            library('spotify-java-api', 'se.michaelthelin.spotify', 'spotify-web-api-java').version('8.3.6')
 
             library('junit-platform-commons', 'org.junit.platform', 'junit-platform-commons').versionRef('junitPlatform')
             library('junit-platform-engine', 'org.junit.platform', 'junit-platform-engine').versionRef('junitPlatform')
@@ -53,3 +63,4 @@ dependencyResolutionManagement {
         }
     }
 }
+

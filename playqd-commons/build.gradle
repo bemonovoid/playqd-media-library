@@ -1,0 +1,23 @@
+plugins {
+    id 'maven-publish'
+}
+
+dependencies {
+    compileOnly libs.javax.validation
+    compileOnly libs.jackson.annotation
+    compileOnly libs.spring.data.commons
+    compileOnly libs.logback.classic
+    compileOnly libs.logback.core
+}
+
+jar {
+    enabled = true
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+        }
+    }
+}
