@@ -54,7 +54,6 @@ final class MusicBeePlaylistFetcher extends PlaylistFolderFetcher {
       path
           .filter(p -> FileUtils.getFileExtension(p).equals("xautopf"))
           .map(this::read)
-          .
           .toList();
       return null;
     } catch (Exception e) {
