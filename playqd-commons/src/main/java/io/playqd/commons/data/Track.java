@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 
 public record Track(long id,
                     String uuid,
+                    String spotifyId,
                     String title,
                     String number,
                     Artist artist,
@@ -18,15 +19,15 @@ public record Track(long id,
                     FileAttributes fileAttributes,
                     AdditionalInfo additionalInfo) {
 
-  public record Artist(String id, String name) {
+  public record Artist(String id, String spotifyId, String name) {
 
   }
 
-  public record Album(String id, String name, String genreId, String genre) {
+  public record Album(String id, String spotifyId, String name, String genreId, String genre) {
 
   }
 
-  public record Length(int inSeconds, double precise, String inTimeFormat) {
+  public record Length(int seconds, double precise, String readable) {
 
   }
 

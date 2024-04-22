@@ -1,5 +1,6 @@
 package io.playqd.controller;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.playqd.commons.data.ItemType;
 import io.playqd.commons.data.Track;
 import io.playqd.model.AudioFile;
@@ -11,12 +12,14 @@ import io.playqd.service.playlist.PlaylistService;
 import io.playqd.service.watchfolder.WatchFolderBrowser;
 import io.playqd.util.FileUtils;
 import io.playqd.util.TimeUtils;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpRange;
@@ -43,6 +46,7 @@ import java.util.Optional;
 @Validated
 @RestController
 @RequestMapping("/api/v1/tracks")
+@Tag(name = "Tracks")
 class TrackController {
 
   private final AudioFileDao audioFileDao;
@@ -65,25 +69,25 @@ class TrackController {
 
   @GetMapping("/artists/{artistId}")
   Page<Track> artistTracks(@PathVariable(name = "artistId") String artistId,
-                     @PageableDefault(size = 100, sort = "name") Pageable page) {
+                           @PageableDefault(size = 25, sort = "trackName") Pageable page) {
     return audioFileDao.getAudioFilesByArtistId(artistId, page).map(this::mapToTrack);
   }
 
   @GetMapping("/albums/{albumId}")
   Page<Track> albumTracks(@PathVariable(name = "albumId") String albumId,
-                     @PageableDefault(size = 100, sort = "name") Pageable page) {
+                     @PageableDefault(size = 25, sort = "trackName") Pageable page) {
     return audioFileDao.getAudioFilesByAlbumId(albumId, page).map(this::mapToTrack);
   }
 
   @GetMapping("/genres/{genreId}")
   Page<Track> genreTracks(@PathVariable(name = "genreId") String genreId,
-                          @PageableDefault(size = 100, sort = "name") Pageable page) {
+                          @PageableDefault(size = 25, sort = "trackName") Pageable page) {
     return audioFileDao.getAudioFilesByGenreId(genreId, page).map(this::mapToTrack);
   }
 
   @GetMapping("/playlists/{playlistId}")
   Page<Track> playlistTracks(@PathVariable(name = "playlistId") String playlistId,
-                             @PageableDefault(size = 100, sort = "name") Pageable page) {
+                             @PageableDefault(size = 25, sort = "trackName") Pageable page) {
     return playlistService.getByUUID(playlistId)
         .map(p -> audioFileDao.getAudioFilesFromPlaylist(p, page).map(this::mapToTrack))
         .orElse(Page.empty());
@@ -91,7 +95,7 @@ class TrackController {
 
   @GetMapping("/folders/{folderId}")
   Page<Track> playedTracks(@PathVariable(name = "folderId") String folderId,
-                           @PageableDefault(size = 100, sort = "name") Pageable page) {
+                           @PageableDefault(size = 25, sort = "trackName") Pageable page) {
     var audioItems = watchFolderBrowser.browse(folderId, ItemType.audioFile);
     var locations = audioItems.stream()
         .map(watchFolderItem -> watchFolderItem.path().toString())
@@ -100,24 +104,27 @@ class TrackController {
   }
 
   @GetMapping("/played")
-  Page<Track> playedTracks(@PageableDefault(size = 100, sort = "name") Pageable page) {
+  Page<Track> playedTracks(@PageableDefault(size = 25, sort = "trackName") Pageable page) {
     return audioFileDao.getPlayedAudioFiles(page).map(this::mapToTrack);
   }
 
   @GetMapping("/rated")
-  Page<Track> ratedTracks(@PageableDefault(size = 100, sort = "name") Pageable page) {
+  Page<Track> ratedTracks(@PageableDefault(size = 25, sort = "trackName") Pageable page) {
     return audioFileDao.getAudioFilesWithRating(page).map(this::mapToTrack);
   }
 
   @GetMapping("/saved")
-  Page<Track> savedTracks(@PageableDefault(size = 100, sort = "name") Pageable page) {
+  Page<Track> savedTracks(@PageableDefault(size = 25, sort = "trackName") Pageable page) {
     return Page.empty();
   }
 
   @GetMapping("/recentlyAdded")
-  Page<Track> recentlyAddedTracks(@PageableDefault(size = 100, sort = "name") Pageable page,
-                                  @RequestParam(required = false, name = "durationFromNow") //"PT3M"
-                                  Duration duration) {
+  Page<Track> recentlyAddedTracks(
+      @PageableDefault(
+          size = 25,
+          sort = "fileAddedToWatchFolderDate",
+          direction = Sort.Direction.DESC) Pageable page,
+      @RequestParam(required = false, name = "durationFromNow") Duration duration) { //"PT3M"
     if (duration != null) {
       var dateAfter = LocalDate.now().minusDays(duration.toDays());
       return audioFileDao.getAudioFilesAddedToWatchFolderAfterDate(dateAfter, page).map(this::mapToTrack);
@@ -130,7 +137,7 @@ class TrackController {
   }
 
   @GetMapping("/tracks")
-  Page<Track> tracks(@PageableDefault(size = 100, sort = "name") Pageable page,
+  Page<Track> tracks(@PageableDefault(size = 25, sort = "trackName") Pageable page,
                      @RequestParam(name = "title", required = false) String title) {
     if (StringUtils.hasText(title)) {
       return audioFileDao.getAudioFilesByTitle(title, page).map(this::mapToTrack);
@@ -224,10 +231,11 @@ class TrackController {
 
   private Track mapToTrack(AudioFile audioFile) {
 
-    var artist = new Track.Artist(audioFile.artistId(), audioFile.artistName());
+    var artist = new Track.Artist(audioFile.artistId(), audioFile.spotifyArtistId(), audioFile.artistName());
 
     var album = new Track.Album(
         audioFile.albumId(),
+        audioFile.spotifyAlbumId(),
         audioFile.albumName(),
         audioFile.genreId(),
         audioFile.genre());
@@ -256,6 +264,7 @@ class TrackController {
     return new Track(
         audioFile.id(),
         audioFile.trackId(),
+        audioFile.spotifyTrackId(),
         audioFile.trackName(),
         audioFile.trackNumber(),
         artist,

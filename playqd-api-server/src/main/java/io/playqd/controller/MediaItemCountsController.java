@@ -3,6 +3,7 @@ package io.playqd.controller;
 import io.playqd.commons.data.MediaItemsCount;
 import io.playqd.persistence.MediaLibraryDao;
 import io.playqd.service.playlist.PlaylistService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 @RestController
 @RequestMapping("/api/v1/counts")
+@Tag(name = "Counts")
 class MediaItemCountsController {
 
   private final MediaLibraryDao mediaLibraryDao;

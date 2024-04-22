@@ -5,6 +5,7 @@ import io.playqd.commons.data.ItemType;
 import io.playqd.service.metadata.AlbumArtworkService;
 import io.playqd.service.metadata.ArtworkKey;
 import io.playqd.service.watchfolder.WatchFolderBrowser;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
@@ -21,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/artwork")
+@Tag(name = "Artwork")
 class ArtworkController {
 
   private final WatchFolderBrowser watchFolderBrowser;

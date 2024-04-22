@@ -55,7 +55,7 @@ dependencies {
 }
 
 bootJar {
-    archiveBaseName = 'playqd-media-library'
+    archiveBaseName = 'playqd-api-server'
     mainClass = 'io.playqd.Application'
 }
 
@@ -69,7 +69,7 @@ jib {
         image = 'openjdk:21-slim'
     }
     to {
-        image = 'playqd-media-library'
+        image = 'playqd-api-server'
         tags = ["${project.version}"]
     }
     container {

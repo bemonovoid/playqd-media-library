@@ -7,6 +7,7 @@ import io.playqd.commons.data.WatchFolderContentInfo;
 import io.playqd.commons.data.WatchFolderItem;
 import io.playqd.persistence.WatchFolderDao;
 import io.playqd.service.watchfolder.WatchFolderBrowser;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -25,6 +26,7 @@ import java.util.List;
 @Validated
 @RestController
 @RequestMapping("/api/v1/folders")
+@Tag(name = "Folders")
 class WatchFolderController {
 
   private final WatchFolderDao watchFolderDao;

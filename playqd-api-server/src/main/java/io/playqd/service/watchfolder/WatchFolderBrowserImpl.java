@@ -62,7 +62,7 @@ public class WatchFolderBrowserImpl implements WatchFolderBrowser {
       var path = paths.get(folderId);
       return browseInPath(path, null, pageable);
     } else {
-      return Page.empty();
+      return Page.empty(pageable);
     }
   }
 
