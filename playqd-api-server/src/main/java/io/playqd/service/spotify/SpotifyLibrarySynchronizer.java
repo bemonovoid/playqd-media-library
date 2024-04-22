@@ -7,8 +7,6 @@ import io.playqd.config.properties.PlayqdProperties;
 import io.playqd.exception.PlayqdException;
 import io.playqd.model.event.WinampLibraryCreated;
 import io.playqd.model.event.WinampLibraryModified;
-import io.playqd.model.event.PlaylistCreatedEvent;
-import io.playqd.model.event.PlaylistDeletedEvent;
 import io.playqd.model.event.PlaylistModifiedEvent;
 import io.playqd.persistence.AudioFileDao;
 import io.playqd.service.spotify.client.SpotifyApiContext;

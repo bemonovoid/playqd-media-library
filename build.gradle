@@ -7,49 +7,113 @@ buildscript {
 plugins {
     id 'java'
     id 'maven-publish'
+    id 'com.google.cloud.tools.jib' version libs.versions.jibPlugin
+    id 'org.springframework.boot' version libs.versions.springBoot
+    id "io.spring.dependency-management" version libs.versions.springDependencyPlugin
 }
 
-allprojects {
 
-    apply plugin: 'java'
-    apply plugin: 'java-library'
-//    apply plugin: 'io.spring.dependency-management'
 
-    repositories {
-        mavenLocal()
-        mavenCentral()
-    }
+apply plugin: 'java'
+apply plugin: 'java-library'
+apply plugin: 'io.spring.dependency-management'
 
-//    dependencyManagement {
-//        imports {
-//            mavenBom("org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}")
-//        }
-//    }
-
-    dependencies {
-        compileOnly libs.lombok
-        annotationProcessor libs.lombok
-
-        testImplementation libs.lombok
-        testAnnotationProcessor libs.lombok
-
-        testImplementation libs.junit.platform.commons
-        testRuntimeOnly libs.junit.platform.engine
-        testRuntimeOnly libs.junit.platform.launcher
-        testImplementation libs.junit.jupiter.api
-        testImplementation libs.junit.jupiter.engine
-        testImplementation libs.mockito.core
-    }
-
-    compileJava {
-        options.compilerArgs += ['--enable-preview']
-    }
-
-    test {
-        useJUnitPlatform()
-    }
-
+jar {
+    enabled = true
 }
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencyManagement {
+    imports {
+        mavenBom("org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}")
+    }
+}
+
+dependencies {
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
+
+    runtimeOnly libs.mysql
+    implementation libs.flyway.db
+    implementation libs.flyway.mysql
+    implementation libs.ehcache
+    implementation libs.jackson.xml.databind
+    implementation libs.apache.tika
+    implementation libs.jython
+    implementation libs.jaudiotagger
+    implementation libs.micrometer.prometheus
+
+    implementation libs.spring.boot.actuator
+    implementation libs.spring.boot.cache
+    implementation libs.spring.boot.logging
+    implementation libs.spring.boot.validation
+    implementation libs.spring.boot.data.jdbc
+    implementation libs.spring.boot.data.jpa
+    implementation libs.spring.boot.web
+
+    implementation libs.spring.doc.openapi
+    implementation libs.spring.cloud.eureka.client
+
+    implementation libs.spotify.java.api
+
+    implementation('org.yaml:snakeyaml') {
+        version {
+            strictly '2.0'
+        }
+    }
+
+    testImplementation libs.lombok
+    testAnnotationProcessor libs.lombok
+
+    testImplementation libs.h2
+    testImplementation libs.spring.boot.test
+
+    testImplementation libs.junit.platform.commons
+    testRuntimeOnly libs.junit.platform.engine
+    testRuntimeOnly libs.junit.platform.launcher
+    testImplementation libs.junit.jupiter.api
+    testImplementation libs.junit.jupiter.engine
+    testImplementation libs.mockito.core
+}
+
+bootJar {
+    archiveBaseName = 'playqd-api-server'
+    mainClass = 'io.playqd.Application'
+}
+
+springBoot {
+    buildInfo()
+}
+
+jib {
+    allowInsecureRegistries = 'true'
+    from {
+        image = 'openjdk:21-slim'
+    }
+    to {
+        image = 'playqd-api-server'
+        tags = ["${project.version}"]
+    }
+    container {
+        mainClass = 'io.playqd.Application'
+        ports = ["8015"]
+        creationTime = "USE_CURRENT_TIMESTAMP"
+        environment = [SPRING_PROFILES_ACTIVE: "docker"]
+    }
+}
+
+compileJava {
+    options.compilerArgs += ['--enable-preview']
+}
+
+test {
+    useJUnitPlatform()
+}
+
 //jacocoTestReport {
 //    dependsOn test
 //    reports {

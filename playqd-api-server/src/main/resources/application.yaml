@@ -14,7 +14,7 @@ server:
 
 spring:
   application:
-    name: "playqd-media-library"
+    name: "playqd-api-server"
   cache:
     jcache:
       provider: "org.ehcache.jsr107.EhcacheCachingProvider"

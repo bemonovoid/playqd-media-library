@@ -286,6 +286,6 @@ fabric.properties
 
 /application.pid
 
-/playqd-media-library-server/src/main/resources/application-prod.yaml
-/playqd-media-library-server/src/main/resources/application-dev.yaml
-/playqd-media-library-server/src/main/resources/application-docker.yaml
+/src/main/resources/application-prod.yaml
+/src/main/resources/application-dev.yaml
+/src/main/resources/application-docker.yaml

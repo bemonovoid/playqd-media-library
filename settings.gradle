@@ -1,8 +1,5 @@
 rootProject.name = 'playqd-media-library'
 
-include 'playqd-commons'
-include 'playqd-api-server'
-
 dependencyResolutionManagement {
     versionCatalogs {
         libs {

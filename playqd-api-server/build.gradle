@@ -42,8 +42,6 @@ dependencies {
 
     implementation libs.spotify.java.api
 
-    implementation project(':playqd-commons')
-
     implementation('org.yaml:snakeyaml') {
         version {
             strictly '2.0'
